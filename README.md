@@ -107,9 +107,9 @@ RabbitMQ Management UI:
 
 
 
-docs/ARCHITECTURE.md - описание архитектуры
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - описание архитектуры
 
-docs/PLAN.md - план работ
+[docs/PLAN.md](docs/PLAN.md) - план работ
 
 .gitignore - исключения для Git
 
@@ -121,7 +121,7 @@ README.md - описание проекта и инструкции
 
 
 
-docs/PLAN.md
+[docs/PLAN.md](docs/PLAN.md)
 
 
 
