@@ -330,7 +330,7 @@ GET /api/users/{id} - получение профиля пользователя
 
 
 
-!\[ER-диаграмма](er-diagram.png)
+![ER-диаграмма](er-diagram.png)
 
 
 
