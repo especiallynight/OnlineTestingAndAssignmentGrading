@@ -58,135 +58,73 @@
 
 
 
+
 ```mermaid
-
 flowchart TD
-
-&#x20;   Student\[Студент]
-
-&#x20;   Teacher\[Преподаватель]
-
-
-
-&#x20;   Client\[Веб-клиент]
-
-&#x20;   Gateway\[API Gateway]
-
-&#x20;   SignalR\[SignalR Hub]
-
-
-
-&#x20;   Student --> Client
-
-&#x20;   Teacher --> Client
-
-&#x20;   Client --> Gateway
-
-&#x20;   Client <--> SignalR
-
-
-
-&#x20;   CourseSvc\[Сервис курсов и заданий]
-
-&#x20;   ExamSvc\[Сервис прохождения тестов]
-
-&#x20;   GradeSvc\[Сервис проверки и оценивания]
-
-&#x20;   AnalSvc\[Сервис аналитики]
-
-&#x20;   IdentitySvc\[Сервис идентификации]
-
-
-
-&#x20;   Gateway --> CourseSvc
-
-&#x20;   Gateway --> ExamSvc
-
-&#x20;   Gateway --> AnalSvc
-
-&#x20;   Gateway --> IdentitySvc
-
-
-
-&#x20;   DBCourse\[(БД курсов)]
-
-&#x20;   DBExam\[(БД тестов)]
-
-&#x20;   DBGrade\[(БД проверки и оценивания)]
-
-&#x20;   DBAnal\[(БД аналитики)]
-
-&#x20;   DBIdentity\[(БД идентификации)]
-
-
-
-&#x20;   CourseSvc --> DBCourse
-
-&#x20;   ExamSvc --> DBExam
-
-&#x20;   GradeSvc --> DBGrade
-
-&#x20;   AnalSvc --> DBAnal
-
-&#x20;   IdentitySvc --> DBIdentity
-
-
-
-&#x20;   OutboxExam\[(Таблица OutboxMessages)]
-
-&#x20;   DBExam --- OutboxExam
-
-
-
-&#x20;   OutboxGrade\[(Таблица OutboxMessages)]
-
-&#x20;   DBGrade --- OutboxGrade
-
-
-
-&#x20;   ExamSvc --> OutboxExam
-
-&#x20;   OutboxExam --> WorkerExam\[Обработчик Outbox ExamService]
-
-&#x20;   WorkerExam -->|TestSubmittedEvent| RMQ
-
-
-
-&#x20;   GradeSvc --> OutboxGrade
-
-&#x20;   OutboxGrade --> WorkerGrade\[Обработчик Outbox GradingService]
-
-&#x20;   WorkerGrade -->|GradingCompleted / GradingFailed| RMQ
-
-
-
-&#x20;   RMQ((RabbitMQ))
-
-&#x20;   RMQ -->|TestSubmittedEvent| GradeSvc
-
-&#x20;   RMQ -->|GradingCompleted / GradingFailed| ExamSvc
-
-&#x20;   RMQ -->|GradingCompleted| AnalSvc
-
-
-
-&#x20;   Redis\[(Redis кэш)]
-
-&#x20;   CourseSvc <--> Redis
-
-
-
-&#x20;   Sandbox\[Изолированный запуск кода]
-
-&#x20;   GradeSvc --> Sandbox
-
-&#x20;   Sandbox --> GradeSvc
-
-
-
-&#x20;   ExamSvc -->|Уведомление о результате| SignalR
-
+    Student[Студент]
+    Teacher[Преподаватель]
+
+    Client[Веб-клиент]
+    Gateway[API Gateway]
+    SignalR[SignalR Hub]
+
+    Student --> Client
+    Teacher --> Client
+    Client --> Gateway
+    Client <--> SignalR
+
+    CourseSvc[Сервис курсов и заданий]
+    ExamSvc[Сервис прохождения тестов]
+    GradeSvc[Сервис проверки и оценивания]
+    AnalSvc[Сервис аналитики]
+    IdentitySvc[Сервис идентификации]
+
+    Gateway --> CourseSvc
+    Gateway --> ExamSvc
+    Gateway --> AnalSvc
+    Gateway --> IdentitySvc
+
+    DBCourse[(БД курсов)]
+    DBExam[(БД тестов)]
+    DBGrade[(БД проверки и оценивания)]
+    DBAnal[(БД аналитики)]
+    DBIdentity[(БД идентификации)]
+
+    CourseSvc --> DBCourse
+    ExamSvc --> DBExam
+    GradeSvc --> DBGrade
+    AnalSvc --> DBAnal
+    IdentitySvc --> DBIdentity
+
+    OutboxExam[(Таблица OutboxMessages)]
+    DBExam --- OutboxExam
+
+    OutboxGrade[(Таблица OutboxMessages)]
+    DBGrade --- OutboxGrade
+
+    ExamSvc --> OutboxExam
+    OutboxExam --> WorkerExam[Обработчик Outbox ExamService]
+    WorkerExam -->|TestSubmittedEvent| RMQ
+
+    GradeSvc --> OutboxGrade
+    OutboxGrade --> WorkerGrade[Обработчик Outbox GradingService]
+    WorkerGrade -->|GradingCompleted / GradingFailed| RMQ
+
+    RMQ((RabbitMQ))
+    RMQ -->|TestSubmittedEvent| GradeSvc
+    RMQ -->|GradingCompleted / GradingFailed| ExamSvc
+    RMQ -->|GradingCompleted| AnalSvc
+
+    Redis[(Redis кэш)]
+    CourseSvc <--> Redis
+
+    Sandbox[Изолированный запуск кода]
+    GradeSvc --> Sandbox
+    Sandbox --> GradeSvc
+
+    ExamSvc -->|Уведомление о результате| SignalR
 ```
+
 
 ## 4. Описание сервисов
 
