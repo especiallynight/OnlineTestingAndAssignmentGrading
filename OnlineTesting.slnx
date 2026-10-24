@@ -5,4 +5,5 @@
   <Project Path="ExamService/ExamService.csproj" />
   <Project Path="GradingService/GradingService.csproj" />
   <Project Path="IdentityService/IdentityService.csproj" />
+  <Project Path="OnlineTesting.Tests/OnlineTesting.Tests.csproj" />
 </Solution>
