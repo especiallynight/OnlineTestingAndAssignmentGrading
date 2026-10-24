@@ -1,2 +1,8 @@
 <Solution>
+  <Project Path="AnalyticsService/AnalyticsService.csproj" />
+  <Project Path="ApiGateway/ApiGateway.csproj" />
+  <Project Path="CourseService/CourseService.csproj" />
+  <Project Path="ExamService/ExamService.csproj" />
+  <Project Path="GradingService/GradingService.csproj" />
+  <Project Path="IdentityService/IdentityService.csproj" />
 </Solution>
