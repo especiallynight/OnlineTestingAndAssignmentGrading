@@ -16,8 +16,6 @@ namespace IdentityService.Models
         public string Email { get; set; } = string.Empty;
 
         [Required]
-        [MinLength(8)]
-        [MaxLength(128)]
         public string PasswordHash { get; set; } = string.Empty;
         public UserRole Role { get; set; } = UserRole.Student;
         public ICollection<TeacherApplication> TeacherApplications { get; set; } = new List<TeacherApplication>();

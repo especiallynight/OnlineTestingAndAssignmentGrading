@@ -14,8 +14,9 @@ namespace AnalyticsService.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            
             modelBuilder.Entity<StudentStatistics>()
-                .HasIndex(s => new { s.StudentId, s.CourseId })
+                .HasIndex(student => new { student.StudentId, student.CourseId })
                 .IsUnique();
         }
 
