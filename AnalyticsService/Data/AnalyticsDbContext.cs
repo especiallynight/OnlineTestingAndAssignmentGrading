@@ -14,10 +14,13 @@ namespace AnalyticsService.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-            
+
             modelBuilder.Entity<StudentStatistics>()
                 .HasIndex(student => new { student.StudentId, student.CourseId })
                 .IsUnique();
+            
+            modelBuilder.Entity<StudentStatistics>()
+                .HasKey(statistics => statistics.StudentStatisticId);
         }
 
     }

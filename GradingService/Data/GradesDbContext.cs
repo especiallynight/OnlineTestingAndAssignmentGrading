@@ -24,7 +24,10 @@ namespace GradingService.Data
             modelBuilder.Entity<OutboxGrade>()
                 .Property(message => message.Payload)
                 .HasColumnType("jsonb");
-           
+            
+            modelBuilder.Entity<OutboxGrade>()
+                .HasKey(message => message.OutboxMessageId);
+
 
         }
     }

@@ -39,6 +39,8 @@ namespace ExamService.Data
                 .Property(attempt => attempt.Status)
                 .HasConversion<string>() 
                 .HasMaxLength(30);
+            modelBuilder.Entity<ExamAttempt>()
+                .HasKey(attempt => attempt.AttemptId);
 
 
         }

@@ -11,6 +11,7 @@ namespace CourseService.Data
         public DbSet<Course> Courses { get; set; }
         public DbSet<Assignment> Assignments { get; set; }
         public DbSet<Question> Questions { get; set; }
+        public DbSet<Enrollment> Enrollments { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -26,9 +27,18 @@ namespace CourseService.Data
                 .HasForeignKey(question => question.AssignmentId);
             
             modelBuilder.Entity<Question>()
-                .Property(question => question.Options)
+                .Property(question => question.QuestionOptions)
                 .HasColumnType("jsonb");
-           
+
+            modelBuilder.Entity<Enrollment>()
+                .HasOne(enrollment => enrollment.Course)
+                .WithMany()
+                .HasForeignKey(enrollment => enrollment.CourseId);
+
+            modelBuilder.Entity<Enrollment>()
+                .HasIndex(enrollment => new { enrollment.StudentId, enrollment.CourseId })
+                .IsUnique();
+
 
         }
     }
