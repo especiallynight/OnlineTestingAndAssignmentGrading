@@ -3,16 +3,18 @@ using System.Text.Json;
 
 namespace CourseService.DTOs
 {
-    public class UpdateQuestionDTO
+    public class UpdateQuestionDto
     {
         [Required(ErrorMessage = "Текст вопроса обязателен")]
         [MinLength(3, ErrorMessage = "Текст вопроса должен содержать минимум 3 символа")]
+        [MaxLength(100, ErrorMessage = "Текст вопроса не должен превышать 100 символов")]
         public string Text { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Тип вопроса обязателен")]
+        [RegularExpression("^(SingleChoice|MultipleChoice|Code)$", ErrorMessage = "Недопустимый тип вопроса")]
         public string Type { get; set; } = string.Empty;
 
-        public JsonDocument Options { get; set; } =
-            JsonDocument.Parse("{}");
+        [Required(ErrorMessage = "Параметры вопроса обязательны")]
+        public JsonElement? Options { get; set; }
     }
 }

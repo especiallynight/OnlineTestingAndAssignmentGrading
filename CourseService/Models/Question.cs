@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 
 namespace CourseService.Models
 {
@@ -7,7 +8,7 @@ namespace CourseService.Models
         public int QuestionId { get; set; }
         public string Text { get; set; } = string.Empty;
         public string Type { get; set; } = string.Empty;
-        public JsonDocument Options { get; set; } = JsonDocument.Parse("{}");
+        public JsonElement? Options { get; set; } 
         public int AssignmentId { get; set; }
         public Assignment Assignment { get; set; } = null!;
 

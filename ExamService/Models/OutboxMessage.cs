@@ -6,8 +6,8 @@ namespace ExamService.Models
     {
         public int OutboxMessageId { get; set; }
         public string EventType { get; set; } = string.Empty;
-        public JsonDocument Payload { get; set; } = JsonDocument.Parse("{}");
-        public DateTimeOffset CreatedAt { get; set; }
+        public JsonElement Payload { get; set; } 
+        public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow; 
         public DateTimeOffset? PublishedAt { get; set; }
         public int RetryCount { get; set; }
         public string? ErrorMessage { get; set; }

@@ -1,4 +1,4 @@
-﻿using ExamService.Models;
+﻿using ExamService.Enums;
 
 namespace ExamService.Models
 {
@@ -8,7 +8,7 @@ namespace ExamService.Models
         public int StudentId { get; set; }
         public DateTimeOffset StartedAt { get; set; }
         public DateTimeOffset DeadlineAt { get; set; }
-        public string Status { get; set; } = "InProgress";
+        public ExamAttemptStatus Status { get; set; } = ExamAttemptStatus.InProgress;
         public int AssignmentId { get; set; }
         public ICollection<Answer> Answers { get; set; } = new List<Answer>();
 
