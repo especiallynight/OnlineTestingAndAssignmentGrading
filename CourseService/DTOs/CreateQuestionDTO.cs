@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace CourseService.DTOs
 {
-    public class CreateQuestionDto
+    public class CreateQuestionDTO
     {
         [Required(ErrorMessage = "Текст вопроса обязателен")]
         [MaxLength(100, ErrorMessage = "Название курса не должно превышать 100 символов")]

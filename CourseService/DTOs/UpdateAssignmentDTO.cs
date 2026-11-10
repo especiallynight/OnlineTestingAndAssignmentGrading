@@ -2,7 +2,7 @@
 
 namespace CourseService.DTOs
 {
-    public class UpdateAssignmentDto
+    public class UpdateAssignmentDTO
     {
         [Required(ErrorMessage = "Название задания обязательно")]
         [MinLength(3, ErrorMessage = "Название задания должно содержать минимум 3 символа")]

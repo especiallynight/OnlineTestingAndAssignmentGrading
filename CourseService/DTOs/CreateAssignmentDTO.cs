@@ -2,7 +2,7 @@
 
 namespace CourseService.DTOs
 {
-    public class CreateAssignmentDto
+    public class CreateAssignmentDTO
     {
         [Required(ErrorMessage = "Название задания обязательно")]
         [MaxLength(100, ErrorMessage = "Текст задания не должно превышать 100 символов")]

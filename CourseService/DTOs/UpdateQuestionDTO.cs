@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace CourseService.DTOs
 {
-    public class UpdateQuestionDto
+    public class UpdateQuestionDTO
     {
         [Required(ErrorMessage = "Текст вопроса обязателен")]
         [MinLength(3, ErrorMessage = "Текст вопроса должен содержать минимум 3 символа")]
