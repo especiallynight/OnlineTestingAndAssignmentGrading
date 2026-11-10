@@ -4,22 +4,22 @@ namespace IdentityService.DTOs
 {
     public class CreateUserDTO
     {
-        [Required]
-        [MaxLength(40)]
-        public string FirstName { get; set; } = string.Empty;
-
-        [Required]
-        [MaxLength(50)]
-        public string LastName { get; set; } = string.Empty;
-
-        [Required]
-        [EmailAddress]
-        [MaxLength(100)]
+        [Required(ErrorMessage = "Email обязателен")]
+        [EmailAddress(ErrorMessage = "Некорректный email")]
+        [StringLength(100, ErrorMessage = "Email не более 100 символов")]
         public string Email { get; set; } = string.Empty;
 
-        [Required]
-        [MinLength(8)]
-        [MaxLength(128)]
+        [Required(ErrorMessage = "Пароль обязателен")]
+        [MinLength(6, ErrorMessage = "Пароль должен быть не менее 6 символов")]
+        [MaxLength(100, ErrorMessage = "Пароль не более 100 символов")]
         public string Password { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Имя обязательно")]
+        [StringLength(40, MinimumLength = 2, ErrorMessage = "Имя от 2 до 40 символов")]
+        public string FirstName { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Фамилия обязательна")]
+        [StringLength(50, MinimumLength = 2, ErrorMessage = "Фамилия от 2 до 50 символов")]
+        public string LastName { get; set; } = string.Empty;
     }
 }
