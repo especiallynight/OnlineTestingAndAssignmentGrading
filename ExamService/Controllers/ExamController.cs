@@ -1,0 +1,140 @@
+﻿using ExamService.Data;
+using ExamService.DTOs;
+using ExamService.Enums;
+using ExamService.Models;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+
+namespace ExamService.Controllers
+{
+    [Authorize]
+    [ApiController]
+    [Route("api/exam_attempts")]
+    public class ExamController : ControllerBase
+    {
+        private readonly ExamDbContext _context;
+
+        public ExamController(ExamDbContext context)
+        {
+            _context = context;
+        }
+
+        private int? GetUserId()
+        {
+            var userId = User.FindFirst("sub")?.Value;
+            if (int.TryParse(userId, out var id))
+                return id;
+            return null;
+        }
+
+        private static ExamAttemptResponseDTO ToDTO(ExamAttempt attempt)
+        {
+            return new ExamAttemptResponseDTO
+            {
+                AttemptId = attempt.AttemptId,
+                StudentId = attempt.StudentId,
+                AssignmentId = attempt.AssignmentId,
+                StartedAt = attempt.StartedAt,
+                DeadlineAt = attempt.DeadlineAt,
+                Status = attempt.Status
+            };
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<ExamAttemptResponseDTO>>> GetAttempts()
+        {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var attempts = _context.ExamAttempts.AsQueryable();
+
+            if (User.IsInRole("Student"))
+            {
+                attempts = attempts.Where(a => a.StudentId == userId);
+            }
+            else if (!User.IsInRole("Teacher") && !User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
+            var result = await attempts.ToListAsync();
+
+            return Ok(result.Select(ToDTO));
+        }
+
+        [HttpGet("attempt/{attemptId:int}")]
+        public async Task<ActionResult<ExamAttemptResponseDTO>> GetAttemptById(int attemptId)
+        {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var attempt = await _context.ExamAttempts.FirstOrDefaultAsync(a => a.AttemptId == attemptId);
+
+            if (attempt == null)
+                return NotFound();
+
+            if (attempt.StudentId != userId && !User.IsInRole("Teacher") && !User.IsInRole("Admin"))
+                return Forbid();
+
+            return Ok(ToDTO(attempt));
+        }
+
+        [HttpPost("{attemptId:int}/start")]
+        [Authorize(Roles = "Student")]
+        public async Task<ActionResult<ExamAttemptResponseDTO>> StartAttempt(int attemptId, StartAttemptDTO dto)
+        {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var attempt = await _context.ExamAttempts.FindAsync(attemptId);
+            if (attempt == null)
+                return NotFound();
+
+            if (attempt.StudentId != userId)
+                return Forbid();
+
+            if (attempt.StartedAt != null)
+                return Conflict("Попытка уже начата");
+
+            attempt.Status = ExamAttemptStatus.InProgress;
+            attempt.StartedAt = DateTimeOffset.UtcNow;
+            attempt.DeadlineAt = attempt.StartedAt.Value.AddMinutes(dto.TimeLimitMinutes);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(ToDTO(attempt));
+        }
+
+        [HttpPut("{attemptId:int}/stop")]
+        public async Task<ActionResult<ExamAttemptResponseDTO>> StopAttempt(int attemptId)
+        {
+            var userId = GetUserId();
+            if (userId == null)
+                return Unauthorized();
+
+            var attempt = await _context.ExamAttempts.FindAsync(attemptId);
+            if (attempt == null)
+                return NotFound();
+
+            if (attempt.StudentId != userId && !User.IsInRole("Teacher") && !User.IsInRole("Admin"))
+                return Forbid();
+
+            if (attempt.Status != ExamAttemptStatus.InProgress || attempt.StartedAt == null)
+                return Conflict("Попытку нельзя завершить");
+
+            if (attempt.DeadlineAt != null && DateTimeOffset.UtcNow > attempt.DeadlineAt.Value)
+                attempt.Status = ExamAttemptStatus.Expired;
+            else
+                attempt.Status = ExamAttemptStatus.Completed;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(ToDTO(attempt));
+        }
+    }
+}
