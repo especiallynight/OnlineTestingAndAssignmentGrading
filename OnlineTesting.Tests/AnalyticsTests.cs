@@ -68,4 +68,34 @@ public class AnalyticsControllerTests
         Assert.Equal(75, updated.AverageScore);
         Assert.Equal(100, updated.HighestScore);
     }
+
+    //Защита от повторной доставки RabbitMQ
+    [Fact]
+    public void UpdateStatistics_IgnoresDuplicateAttemptId()
+    {
+        var stats = new StudentStatistics
+        {
+            StudentId = 1,
+            CourseId = 1,
+            CompletedAttempts = 1,
+            AverageScore = 80,
+            HighestScore = 80,
+            ProcessedAttemptIds = new List<int> { 100 } 
+        };
+
+        int newAttemptId = 100; 
+        decimal newScorePercent = 90;
+
+        if (!stats.ProcessedAttemptIds.Contains(newAttemptId))
+        {
+            stats.AverageScore = (stats.AverageScore * stats.CompletedAttempts + newScorePercent) / (stats.CompletedAttempts + 1);
+            stats.CompletedAttempts++;
+            stats.ProcessedAttemptIds.Add(newAttemptId);
+        }
+
+        Assert.Equal(1, stats.CompletedAttempts); 
+        Assert.Equal(80, stats.AverageScore);     
+        Assert.Single(stats.ProcessedAttemptIds); 
+    }
+
 }

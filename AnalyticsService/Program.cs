@@ -1,6 +1,9 @@
 using AnalyticsService.Data;
+using AnalyticsService.Consumers; 
+using MassTransit;                
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.StackExchangeRedis; 
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -24,17 +27,13 @@ builder.Services
         {
             ValidateIssuer = true,
             ValidIssuer = jwtSettings["Issuer"],
-
             ValidateAudience = true,
             ValidAudience = jwtSettings["Audience"],
-
             ValidateLifetime = true,
-
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(secretKey)
             ),
-
             RoleClaimType = "role"
         };
     });
@@ -46,6 +45,32 @@ builder.Services.AddDbContext<AnalyticsDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection")
     ));
 
+
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration["Redis:ConnectionString"] ?? "redis:6379";
+    options.InstanceName = "Analytics:";
+});
+
+
+builder.Services.AddMassTransit(x =>
+{
+    x.SetKebabCaseEndpointNameFormatter();
+
+    x.AddConsumer<AttemptGradedConsumer>();
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host("rabbitmq", "/", h =>
+        {
+            h.Username("guest");
+            h.Password("guest");
+        });
+        cfg.ConfigureEndpoints(context);
+    });
+});
+
+builder.Services.AddSignalR();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -71,7 +96,7 @@ app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "API V1");
-    c.RoutePrefix = string.Empty; 
+    c.RoutePrefix = string.Empty;
 });
 
 app.UseAuthentication();
@@ -79,5 +104,6 @@ app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
+app.MapHub<AnalyticsService.Hubs.GradingHub>("/gradingHub");
 
 app.Run();

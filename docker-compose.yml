@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   course-service:
     build:
@@ -23,6 +25,10 @@ services:
       Jwt__Issuer: IdentityService
       Jwt__Audience: OnlineTesting
       ConnectionStrings__DefaultConnection: "Host=host.docker.internal;Port=5432;Database=DBExam;Username=postgres;Password=${DB_PASSWORD}"
+      RabbitMQ__Host: rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
 
   grading-service:
@@ -38,9 +44,14 @@ services:
       ConnectionStrings__DefaultConnection: "Host=host.docker.internal;Port=5432;Database=DBGrade;Username=postgres;Password=${DB_PASSWORD}"
       Services__ExamService: http://exam-service:8080
       Services__CourseService: http://course-service:8080
+      RabbitMQ__Host: rabbitmq
     depends_on:
-      - exam-service
-      - course-service
+      exam-service:
+        condition: service_started
+      course-service:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
 
   analytics-service:
@@ -54,6 +65,13 @@ services:
       Jwt__Issuer: IdentityService
       Jwt__Audience: OnlineTesting
       ConnectionStrings__DefaultConnection: "Host=host.docker.internal;Port=5432;Database=DBAnal;Username=postgres;Password=${DB_PASSWORD}"
+      RabbitMQ__Host: rabbitmq
+      Redis__ConnectionString: "redis:6379"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
   identity-service:
@@ -82,3 +100,31 @@ services:
       - grading-service
       - analytics-service
     restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    hostname: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

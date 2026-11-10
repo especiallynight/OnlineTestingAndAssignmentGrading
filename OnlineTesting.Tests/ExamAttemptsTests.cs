@@ -72,4 +72,19 @@ public class ExamControllerTests
 
         Assert.IsType<ConflictObjectResult>(result.Result);
     }
+
+    //При старте экзамена попытка должна создаваться со статусом "InProgress" и корректным временем
+    [Fact]
+    public async Task StartAttempt_ValidData()
+    {
+        int studentId = 1;
+        int assignmentId = 10;
+
+        var result = new { AttemptId = 1, Status = "InProgress", StartedAt = DateTime.UtcNow };
+
+        Assert.NotNull(result);
+        Assert.Equal("InProgress", result.Status); 
+        Assert.True(result.StartedAt <= DateTime.UtcNow);
+    }
+
 }

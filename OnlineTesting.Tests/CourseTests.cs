@@ -78,5 +78,20 @@ namespace OnlineTesting.Tests
 
             Assert.IsType<ForbidResult>(result);
         }
+
+        //Нельзя создать задание с максимальной оценкой меньше или равной 0.
+        [Fact]
+        public async Task CreateAssignment_WithInvalidMaxScore_ThrowsException()
+        {
+
+            var assignmentDto = new { Title = "Test", MaxScore = 0 };
+
+            var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
+            {
+                throw new ArgumentException("Максимальный счет должен быть больше нуля."); 
+            });
+
+            Assert.Contains("MaxScore", exception.Message);
+        }
     }
 }

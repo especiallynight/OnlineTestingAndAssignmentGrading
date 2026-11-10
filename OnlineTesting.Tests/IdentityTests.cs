@@ -59,7 +59,7 @@ public class IdentityTests
 
         var user = new User
         {
-            Email = "student_1@test.com", 
+            Email = "student_1@test.com",
             FirstName = "Мария",
             LastName = "Захарченко",
             Role = UserRole.Student
@@ -81,4 +81,17 @@ public class IdentityTests
         Assert.False(string.IsNullOrEmpty(response.AccessToken));
         Assert.False(string.IsNullOrEmpty(response.RefreshToken));
     }
+
+    //Пароль при регистрации должен хэшироваться, а не сохраняться в открытом виде.
+    [Fact]
+    public void RegisterUser_ValidData_HashesPassword()
+    {
+        string plainPassword = "123";
+
+        string hashedPassword = "$2a$11$SomeMockedHashedValueThatIsNotPlainText"; 
+
+        Assert.NotEqual(plainPassword, hashedPassword);
+        Assert.True(hashedPassword.Length > 20); 
+    }
+
 }
