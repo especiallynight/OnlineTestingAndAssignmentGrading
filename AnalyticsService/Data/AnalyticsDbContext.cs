@@ -21,6 +21,10 @@ namespace AnalyticsService.Data
             
             modelBuilder.Entity<StudentStatistics>()
                 .HasKey(statistics => statistics.StudentStatisticId);
+
+            modelBuilder.Entity<StudentStatistics>()
+                .Property(s => s.ProcessedAttemptIds)
+                .HasColumnType("integer[]");
         }
 
     }

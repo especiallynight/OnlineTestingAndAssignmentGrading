@@ -9,5 +9,6 @@
         public decimal AverageScore { get; set; }
         public decimal HighestScore { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
+        public List<int> ProcessedAttemptIds { get; set; } = new();
     }
 }
