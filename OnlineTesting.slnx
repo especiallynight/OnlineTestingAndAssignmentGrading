@@ -6,4 +6,5 @@
   <Project Path="GradingService/GradingService.csproj" />
   <Project Path="IdentityService/IdentityService.csproj" />
   <Project Path="OnlineTesting.Tests/OnlineTesting.Tests.csproj" />
+  <Project Path="WebClient/WebClient.csproj" Id="8a088bab-ba79-4a09-a3e9-8eaa4dcd4035" />
 </Solution>
