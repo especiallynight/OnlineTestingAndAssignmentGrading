@@ -1,7 +1,7 @@
 {
   "Routes": [
     {
-      "DownstreamPathTemplate": "/api/StudentStatistics/{studentId}/{courseId}",
+      "DownstreamPathTemplate": "/api/analytics/students/{studentId}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -9,12 +9,23 @@
           "Port": 8080
         }
       ],
-      "UpstreamPathTemplate": "/api/analytics/{studentId}/{courseId}",
+      "UpstreamPathTemplate": "/api/analytics/students/{studentId}",
+      "UpstreamHttpMethod": [ "Get" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/analytics/courses/{courseId}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "analytics-service",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/api/analytics/courses/{courseId}",
       "UpstreamHttpMethod": [ "Get" ]
     }
   ],
   "GlobalConfiguration": {
-    "BaseUrl": "http://localhost:5000"
+    "BaseUrl": "http://localhost:8080"
   }
-
 }
