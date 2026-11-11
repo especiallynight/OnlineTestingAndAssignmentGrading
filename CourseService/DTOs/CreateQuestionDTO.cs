@@ -13,8 +13,9 @@ namespace CourseService.DTOs
         [Required(ErrorMessage = "Тип вопроса обязателен")]
         [RegularExpression("^(SingleChoice|MultipleChoice|Code)$")]
         public string QuestionType { get; set; } = string.Empty;
-        
+
         [Required(ErrorMessage = "Параметры вопроса обязательны")]
         public JsonElement? Options { get; set; }
+        public JsonElement? TestCases { get; set; }
     }
 }

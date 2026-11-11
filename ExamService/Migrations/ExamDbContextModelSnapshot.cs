@@ -38,8 +38,20 @@ namespace ExamService.Migrations
                     b.Property<int>("AttemptId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ExecutionError")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ExecutionStatus")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("PassedTests")
+                        .HasColumnType("integer");
+
                     b.Property<int>("QuestionId")
                         .HasColumnType("integer");
+
+                    b.Property<decimal?>("Score")
+                        .HasColumnType("numeric");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -48,6 +60,9 @@ namespace ExamService.Migrations
 
                     b.Property<DateTimeOffset?>("SubmittedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("TotalTests")
+                        .HasColumnType("integer");
 
                     b.HasKey("AnswerId");
 

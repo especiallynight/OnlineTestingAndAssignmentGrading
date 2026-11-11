@@ -129,6 +129,9 @@ namespace CourseService.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<JsonElement?>("TestCases")
+                        .HasColumnType("jsonb");
+
                     b.HasKey("QuestionId");
 
                     b.HasIndex("AssignmentId");

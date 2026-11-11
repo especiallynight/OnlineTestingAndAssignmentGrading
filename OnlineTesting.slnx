@@ -1,10 +1,12 @@
 <Solution>
   <Project Path="AnalyticsService/AnalyticsService.csproj" />
   <Project Path="ApiGateway/ApiGateway.csproj" />
+  <Project Path="CodeExecutionService/CodeExecutionService.csproj" />
   <Project Path="CourseService/CourseService.csproj" />
   <Project Path="ExamService/ExamService.csproj" />
   <Project Path="GradingService/GradingService.csproj" />
   <Project Path="IdentityService/IdentityService.csproj" />
   <Project Path="OnlineTesting.Tests/OnlineTesting.Tests.csproj" />
+  <Project Path="Shared/Shared.csproj" />
   <Project Path="WebClient/WebClient.csproj" Id="8a088bab-ba79-4a09-a3e9-8eaa4dcd4035" />
 </Solution>

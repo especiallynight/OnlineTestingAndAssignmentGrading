@@ -49,6 +49,7 @@ builder.Services.AddDbContext<ExamDbContext>(options =>
     ));
 
 builder.Services.AddControllers();
+builder.Services.AddHttpClient();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -81,5 +82,11 @@ app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ExamDbContext>();
+    await db.Database.MigrateAsync();
+}
 
 app.Run();

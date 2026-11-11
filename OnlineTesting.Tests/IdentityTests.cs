@@ -39,6 +39,8 @@ public class IdentityTests
         return new AuthController(db, jwtService, passwordHasher);
     }
 
+    // Проверяет вход в систему с несуществующим пользователем.
+    // Ожидает: 401 Unauthorized.
     [Fact]
     public async Task Login_WhenUserNotFound()
     {
@@ -50,6 +52,9 @@ public class IdentityTests
 
         Assert.IsType<UnauthorizedObjectResult>(result.Result);
     }
+
+    // Проверяет успешный вход в систему с правильными учётными данными.
+    // Ожидает: OkObjectResult.
 
     [Fact]
     public async Task Login_WhenCredentialsAreValid()
@@ -81,8 +86,8 @@ public class IdentityTests
         Assert.False(string.IsNullOrEmpty(response.AccessToken));
         Assert.False(string.IsNullOrEmpty(response.RefreshToken));
     }
-
-    //Пароль при регистрации должен хэшироваться, а не сохраняться в открытом виде.
+    // Проверяет, что пароль при регистрации хэшируется, а не сохраняется в открытом виде.
+    // Ожидает: хэшированный пароль отличается от исходного и имеет длину более 20 символов.
     [Fact]
     public void RegisterUser_ValidData_HashesPassword()
     {

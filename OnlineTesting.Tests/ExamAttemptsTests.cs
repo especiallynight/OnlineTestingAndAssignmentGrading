@@ -27,6 +27,8 @@ public class ExamControllerTests
         };
     }
 
+    // Проверяет успешный запуск попытки экзамена.
+    // Ожидает: OkObjectResult, Status = InProgress.
     [Fact]
     public async Task StartAttempt_Success()
     {
@@ -48,7 +50,9 @@ public class ExamControllerTests
         Assert.NotNull(dto.StartedAt); 
         Assert.Equal(ExamAttemptStatus.InProgress, dto.Status);
     }
-
+    
+    // Проверяет запрет повторного запуска уже начатой попытки экзамена.
+    // Ожидает: 409 Conflict.
     [Fact]
     public async Task StartAttemptReturnsConflict()
     {
@@ -73,7 +77,7 @@ public class ExamControllerTests
         Assert.IsType<ConflictObjectResult>(result.Result);
     }
 
-    //При старте экзамена попытка должна создаваться со статусом "InProgress" и корректным временем
+    //При старте экзамена попытка должна создаваться со статусом "InProgress" и корректным временем.
     [Fact]
     public async Task StartAttempt_ValidData()
     {

@@ -51,7 +51,6 @@ namespace AnalyticsService.Controllers
         [Authorize(Roles = "Teacher,Admin")]
         public async Task<IActionResult> GetCourseStatistics(int courseId)
         {
-            // Оптимизация: загружаем только нужные поля
             var stats = await _analyticsDbContext.StudentStatistics
                 .Where(s => s.CourseId == courseId)
                 .Select(s => new { s.CompletedAttempts, s.AverageScore, s.UpdatedAt })
@@ -89,7 +88,6 @@ namespace AnalyticsService.Controllers
 
             if (stats != null && stats.ProcessedAttemptIds.Contains(dto.AttemptId))
             {
-                // ИСПРАВЛЕНИЕ: возвращаем объект вместо строки
                 return Ok(new { message = "Эта попытка уже учтена" });
             }
 

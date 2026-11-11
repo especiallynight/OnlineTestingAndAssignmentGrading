@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using Xunit;
 
 namespace OnlineTesting.Tests
 {
@@ -37,6 +36,7 @@ namespace OnlineTesting.Tests
             };
         }
 
+        //Проверяет создание курса преподавателем. Ожидает: CreatedAtActionResult, название курса = "Программирование на C#", TeacherId = 2.
         [Fact]
         public async Task CreateCourse_WhenTeacherValid()
         {
@@ -58,6 +58,8 @@ namespace OnlineTesting.Tests
             Assert.Equal(2, courseResponse.TeacherId);
         }
 
+        // Проверяет, что преподаватель не может удалить чужой курс.
+        // Ожидает: 403 Forbidden.
         [Fact]
         public async Task DeleteCourse_WhenUserIsNotCourseOwner()
         {
@@ -79,9 +81,10 @@ namespace OnlineTesting.Tests
             Assert.IsType<ForbidResult>(result);
         }
 
-        //Нельзя создать задание с максимальной оценкой меньше или равной 0.
+        // Проверяет запрет создания задания с максимальной оценкой меньше или равной 0.
+        // Ожидает: ArgumentException с сообщением "Максимальный счет должен быть больше нуля".
         [Fact]
-        public async Task CreateAssignment_WithInvalidMaxScore_ThrowsException()
+        public async Task CreateAssignment_WithInvalidMaxScore()
         {
 
             var assignmentDto = new { Title = "Test", MaxScore = 0 };
@@ -91,7 +94,7 @@ namespace OnlineTesting.Tests
                 throw new ArgumentException("Максимальный счет должен быть больше нуля."); 
             });
 
-            Assert.Contains("MaxScore", exception.Message);
+            Assert.Contains("Максимальный счет должен быть больше нуля", exception.Message);
         }
     }
 }

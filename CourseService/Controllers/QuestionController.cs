@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace CourseService.Controllers
 {
@@ -39,7 +40,7 @@ namespace CourseService.Controllers
                     assignment_id = question.AssignmentId,
                     text = question.QuestionText,
                     type = question.QuestionType,
-                    options = question.QuestionOptions
+                    options = question.QuestionOptions,
                 })
                 .ToListAsync();
 
@@ -80,12 +81,27 @@ namespace CourseService.Controllers
                 return BadRequest("Необходимо указать параметры вопроса");
             }
 
+            if (dto.QuestionType == "Code")
+            {
+                if (dto.TestCases == null ||
+                    dto.TestCases.Value.ValueKind != JsonValueKind.Array ||
+                    dto.TestCases.Value.GetArrayLength() == 0)
+                {
+                    return BadRequest("Для вопроса с кодом необходимо указать тесты.");
+                }
+            }
+            else if (dto.TestCases != null)
+            {
+                return BadRequest("Тесты можно добавлять только к вопросам типа Code.");
+            }
+
             var question = new Question
             {
                 AssignmentId = assignment_id,
                 QuestionText = dto.QuestionText,
                 QuestionType = dto.QuestionType,
-                QuestionOptions = dto.Options.Value.Clone()
+                QuestionOptions = dto.Options.Value.Clone(),
+                TestCases = dto.TestCases?.Clone()
             };
 
             _context.Questions.Add(question);

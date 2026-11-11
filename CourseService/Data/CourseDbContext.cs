@@ -38,6 +38,10 @@ namespace CourseService.Data
             modelBuilder.Entity<Enrollment>()
                 .HasIndex(enrollment => new { enrollment.StudentId, enrollment.CourseId })
                 .IsUnique();
+            
+            modelBuilder.Entity<Question>()
+                .Property(question => question.TestCases)
+                .HasColumnType("jsonb");
 
 
         }

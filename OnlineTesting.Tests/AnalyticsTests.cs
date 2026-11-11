@@ -32,6 +32,9 @@ public class AnalyticsControllerTests
         };
     }
 
+
+    //Проверяет, что студент не может получить статистику другого студента.
+    //Ожидаемый результат: Forbid (403).
     [Fact]
     public async Task GetStudentStatisticsForOtherStudent()
     {
@@ -43,6 +46,8 @@ public class AnalyticsControllerTests
         Assert.IsType<ForbidResult>(result);
     }
 
+    //Проверяет корректность обновления статистики после новой попытки.
+    //Ожидает: CompletedAttempts = 2, AverageScore = 75, HighestScore = 100.
     [Fact]
     public async Task UpdateStudentStatistics_CalculatesAverageCorrectly()
     {
@@ -69,7 +74,8 @@ public class AnalyticsControllerTests
         Assert.Equal(100, updated.HighestScore);
     }
 
-    //Защита от повторной доставки RabbitMQ
+    //Защита от повторной доставки RabbitMQ.
+    //Ожидает: повторная попытка не изменяет статистику: CompletedAttempts = 1, AverageScore = 80, количество обработанных попыток = 1.
     [Fact]
     public void UpdateStatistics_IgnoresDuplicateAttemptId()
     {

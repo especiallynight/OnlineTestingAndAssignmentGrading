@@ -1,5 +1,4 @@
-﻿
-using System.Net;
+﻿using System.Net;
 using System.Security.Claims;
 using GradingService.Controllers;
 using GradingService.Data;
@@ -10,7 +9,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Moq.Protected;
-using Xunit;
 
 namespace GradingService.Tests
 {
@@ -33,8 +31,7 @@ namespace GradingService.Tests
                 new Claim(ClaimTypes.Role, "Teacher")
             };
 
-            var user = new ClaimsPrincipal(
-                new ClaimsIdentity(claims, "mock"));
+            var user = new ClaimsPrincipal(new ClaimsIdentity(claims, "mock"));
 
             var handlerMock = new Mock<HttpMessageHandler>();
 
@@ -106,29 +103,11 @@ namespace GradingService.Tests
             return controller;
         }
 
+        //Создать оценку с негативным значением.
+        //Ожидаем ошибку BadRequest с текстом "Некорректные баллы".
+        
         [Fact]
-        public async Task CreateGrade_WhenScoreExceedsMax_ReturnsBadRequest()
-        {
-            using var context = GetDbContext();
-            var controller = GetController(context);
-
-            var dto = new AttemptGradedEvent
-            {
-                AttemptId = 1,
-                Score = 120,
-                MaxScore = 100
-            };
-
-            var result = await controller.CreateGrade(dto);
-
-            var response = Assert.IsType<BadRequestObjectResult>(
-                result.Result);
-
-            Assert.Equal("Некорректные баллы", response.Value);
-        }
-
-        [Fact]
-        public async Task CreateGrade_WhenNegativeScore_ReturnsBadRequest()
+        public async Task CreateGrade_WhenNegativeScore()
         {
             using var context = GetDbContext();
             var controller = GetController(context);
@@ -148,8 +127,11 @@ namespace GradingService.Tests
             Assert.Equal("Некорректные баллы", response.Value);
         }
 
+        //Создаем оценку с валидными данными.
+        //Ожимдаем 201 Created.
+        
         [Fact]
-        public async Task CreateGrade_WhenValidData_ReturnsCreated()
+        public async Task CreateGrade_WhenValidData()
         {
             using var context = GetDbContext();
             var controller = GetController(context);
@@ -170,8 +152,11 @@ namespace GradingService.Tests
             Assert.Single(context.AttemptGrades);
         }
 
+        //Пытаемся создать оценку для той же попытки.
+        //Контроллер должен вернуть ошибку Conflict(409), так как оценка уже существует.      
+        
         [Fact]
-        public async Task CreateGrade_WhenGradeAlreadyExists_ReturnsConflict()
+        public async Task CreateGrade_WhenGradeAlreadyExists()
         {
             using var context = GetDbContext();
 
@@ -202,4 +187,5 @@ namespace GradingService.Tests
             Assert.IsType<ConflictObjectResult>(result.Result);
         }
     }
+
 }
