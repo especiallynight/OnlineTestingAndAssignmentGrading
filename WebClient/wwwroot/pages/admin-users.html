@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Пользователи — OnlineTesting</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header id="app-header" class="app-header"></header>
+
+  <main>
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h1>Пользователи и роли</h1>
+          <p class="page-subtitle">Управление учётными записями студентов, преподавателей и администраторов.</p>
+          <span class="service-note">Сервис: IdentityService</span>
+        </div>
+        <div id="users-actions"></div>
+      </div>
+
+      <div class="stats-grid" id="users-stats"></div>
+
+      <div class="section-head">
+        <h2 class="section-title">Добавить пользователя</h2>
+      </div>
+
+      <form class="form-card" id="user-form">
+        <div class="form-grid">
+          <div class="form-field">
+            <label for="user-name-input">ФИО</label>
+            <input id="user-name-input" type="text" name="fullName" placeholder="Иванов Иван Иванович">
+          </div>
+          <div class="form-field">
+            <label for="user-email-input">Электронная почта</label>
+            <input id="user-email-input" type="email" name="email" placeholder="student@example.ru">
+          </div>
+          <div class="form-field">
+            <label for="user-role-input">Роль</label>
+            <select id="user-role-input" name="role">
+              <option value="student">Студент</option>
+              <option value="teacher">Преподаватель</option>
+              <option value="admin">Администратор</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="user-group-input">Группа / кафедра</label>
+            <input id="user-group-input" type="text" name="group" placeholder="ИС-21">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Создать пользователя</button>
+          <span class="form-hint">В макете запись не сохраняется — форма показывает заглушку.</span>
+        </div>
+      </form>
+
+      <h2 class="section-title">Все пользователи</h2>
+      <div id="users-table"></div>
+    </div>
+  </main>
+
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/layout.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/pages/admin-users.js"></script>
+</body>
+</html>

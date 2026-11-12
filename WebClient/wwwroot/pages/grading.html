@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Проверка работ — OnlineTesting</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header id="app-header" class="app-header"></header>
+
+  <main>
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h1>Работы на ручной проверке</h1>
+          <p class="page-subtitle">Попытки с развёрнутыми ответами, ожидающие оценки преподавателя.</p>
+          <span class="service-note">Сервис: GradingService</span>
+        </div>
+        <div id="grading-actions"></div>
+      </div>
+
+      <div class="stats-grid" id="grading-stats"></div>
+
+      <h2 class="section-title">Очередь проверки</h2>
+      <div id="grading-table"></div>
+
+      <div class="notice">
+        Оценка выставляется вручную. В макете кнопка «Оценить» показывает заглушку — проверка появится после подключения GradingService.
+      </div>
+    </div>
+  </main>
+
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/layout.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/pages/grading.js"></script>
+</body>
+</html>

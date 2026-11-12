@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Прохождение теста — OnlineTesting</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header id="app-header" class="app-header"></header>
+
+  <main>
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h1>Прохождение теста</h1>
+          <p class="page-subtitle" id="test-subtitle">Ответьте на вопросы и отправьте работу.</p>
+          <span class="service-note">Сервис: ExamService</span>
+        </div>
+      </div>
+
+      <div class="test-toolbar">
+        <div>
+          <strong id="test-title">Тест</strong>
+          <p class="muted small" id="test-meta"></p>
+        </div>
+        <div class="timer" aria-label="Оставшееся время">
+          <span class="timer-label">Осталось</span>
+          <span id="test-timer">29:59</span>
+        </div>
+      </div>
+
+      <p class="notice">Таймер статичный: реальный отсчёт будет выполняться на сервере. Ответы не проверяются — это макет.</p>
+
+      <form id="test-form">
+        <div class="question-list" id="question-list"></div>
+
+        <div class="test-submit-bar">
+          <span class="muted small">Отправка ответов станет доступна после подключения ExamService.</span>
+          <button class="btn btn-primary" type="submit">Отправить ответы</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/layout.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/pages/test-taking.js"></script>
+</body>
+</html>

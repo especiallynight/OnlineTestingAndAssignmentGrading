@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Конструктор теста — OnlineTesting</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header id="app-header" class="app-header"></header>
+
+  <main>
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h1>Конструктор теста</h1>
+          <p class="page-subtitle">Настройки теста и вопросы четырёх типов.</p>
+          <span class="service-note">Сервис: ExamService</span>
+        </div>
+        <div id="editor-actions"></div>
+      </div>
+
+      <div class="toolbar">
+        <div class="form-field">
+          <label for="editor-test-select">Редактируемый тест</label>
+          <select id="editor-test-select"></select>
+        </div>
+      </div>
+
+      <form class="form-card" id="test-settings-form">
+        <h2>Параметры теста</h2>
+        <div class="form-grid">
+          <div class="form-field form-field-full">
+            <label for="test-title-input">Название</label>
+            <input id="test-title-input" type="text" name="title">
+          </div>
+          <div class="form-field">
+            <label for="test-course-input">Курс</label>
+            <select id="test-course-input" name="courseId"></select>
+          </div>
+          <div class="form-field">
+            <label for="test-duration-input">Длительность, минут</label>
+            <input id="test-duration-input" type="number" name="durationMin" min="5" max="180">
+          </div>
+          <div class="form-field">
+            <label for="test-status-input">Статус</label>
+            <select id="test-status-input" name="status">
+              <option value="draft">Черновик</option>
+              <option value="published">Опубликован</option>
+            </select>
+          </div>
+          <div class="form-field form-field-full">
+            <label for="test-description-input">Описание</label>
+            <textarea id="test-description-input" name="description"></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" type="submit">Сохранить тест</button>
+          <button class="btn btn-outline" type="button" id="test-preview-btn">Предпросмотр</button>
+        </div>
+      </form>
+
+      <div class="section-head">
+        <h2 class="section-title">Вопросы теста</h2>
+        <span class="muted small" id="questions-count"></span>
+      </div>
+
+      <div class="toolbar" id="question-actions"></div>
+      <div id="question-list"></div>
+    </div>
+  </main>
+
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/layout.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/pages/test-editor.js"></script>
+</body>
+</html>

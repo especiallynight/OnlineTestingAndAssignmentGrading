@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Посылки кода — OnlineTesting</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header id="app-header" class="app-header"></header>
+
+  <main>
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h1>Посылки кода</h1>
+          <p class="page-subtitle">Решения задач и вердикты системы выполнения кода.</p>
+          <span class="service-note">Сервис: CodeExecutionService</span>
+        </div>
+        <div id="submissions-actions"></div>
+      </div>
+
+      <div class="stats-grid" id="submissions-stats"></div>
+
+      <div class="toolbar">
+        <div class="form-field">
+          <label for="verdict-filter">Вердикт</label>
+          <select id="verdict-filter">
+            <option value="all">Все вердикты</option>
+            <option value="OK">OK — принято</option>
+            <option value="WA">WA — неверный ответ</option>
+            <option value="TLE">TLE — превышено время</option>
+            <option value="CE">CE — ошибка компиляции</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="submissions-table"></div>
+
+      <div class="notice">
+        Кнопка «Проверить код» — заглушка. Реальная отправка решения в песочницу появится после подключения CodeExecutionService.
+      </div>
+    </div>
+  </main>
+
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/layout.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/pages/code-submissions.js"></script>
+</body>
+</html>
