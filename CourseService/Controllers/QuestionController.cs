@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace CourseService.Controllers
 {
@@ -16,22 +17,38 @@ namespace CourseService.Controllers
     public class QuestionController : ControllerBase
     {
         private readonly CourseDbContext _context;
+        private readonly IDistributedCache _cache;
 
-        public QuestionController(CourseDbContext context)
+        public QuestionController(CourseDbContext context, IDistributedCache cache)
         {
             _context = context;
+            _cache = cache;
         }
+        private sealed record QuestionCacheItem(
+            int question_id,
+            int assignment_id,
+            string text,
+            string type,
+            JsonElement? options);
 
+        private static readonly DistributedCacheEntryOptions CacheOptions = new()
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+        };
         [HttpGet]
         public async Task<ActionResult> GetQuestions(int assignment_id)
         {
             var assignment_exists = await _context.Assignments
                 .AnyAsync(assignment => assignment.AssignmentId == assignment_id);
-
             if (!assignment_exists)
             {
                 return NotFound("Задание не найдено");
             }
+
+            var key = $"assignments:{assignment_id}:questions";
+            var cached = await _cache.GetStringAsync(key);
+            if (cached != null)
+                return Ok(JsonSerializer.Deserialize<List<QuestionCacheItem>>(cached));
 
             var questions = await _context.Questions
                 .Where(question => question.AssignmentId == assignment_id)
@@ -45,6 +62,7 @@ namespace CourseService.Controllers
                 })
                 .ToListAsync();
 
+            await _cache.SetStringAsync(key, JsonSerializer.Serialize(questions), CacheOptions);
             return Ok(questions);
         }
 
@@ -185,7 +203,7 @@ namespace CourseService.Controllers
             _context.Questions.Add(question);
 
             await _context.SaveChangesAsync();
-
+            await _cache.RemoveAsync($"assignments:{assignment_id}:questions");
             return StatusCode(201, new
             {
                 question_id = question.QuestionId,

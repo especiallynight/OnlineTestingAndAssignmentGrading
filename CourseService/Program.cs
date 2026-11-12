@@ -5,6 +5,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Serilog;
 using System.Text;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,6 +54,13 @@ builder.Services.AddDbContext<CourseDbContext>(options =>
         builder.Configuration.GetConnectionString("DefaultConnection")
     ));
 
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration =
+        builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
+    options.InstanceName = "CourseService:";
+});
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -86,5 +95,11 @@ app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<CourseDbContext>();
+    await db.Database.MigrateAsync();
+}
 
 app.Run();
