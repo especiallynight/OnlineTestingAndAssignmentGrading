@@ -17,13 +17,16 @@ public class ExamControllerTests
     {
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
-            new Claim("sub", userId),
-            new Claim("role", "Student")
-        }));
+        new Claim(ClaimTypes.NameIdentifier, userId),
+        new Claim(ClaimTypes.Role, "Student")
+    }, "Test"));
 
         return new ExamController(db)
         {
-            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } }
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext { User = user }
+            }
         };
     }
 
