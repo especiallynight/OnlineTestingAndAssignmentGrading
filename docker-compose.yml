@@ -4,7 +4,7 @@ services:
   course-service:
     build:
       context: .
-      dockerfile: CourseService/DockerFile
+      dockerfile: CourseService/Dockerfile
     ports:
       - "5001:8080"
     environment:
@@ -18,7 +18,7 @@ services:
   exam-service:
     build:
       context: .
-      dockerfile: ExamService/DockerFile
+      dockerfile: ExamService/Dockerfile
     ports:
       - "5002:8080"
     environment:
@@ -38,7 +38,7 @@ services:
   grading-service:
     build:
       context: .
-      dockerfile: GradingService/DockerFile
+      dockerfile: GradingService/Dockerfile
     ports:
       - "5003:8080"
     environment:
@@ -61,7 +61,7 @@ services:
   analytics-service:
     build:
       context: .
-      dockerfile: AnalyticsService/DockerFile
+      dockerfile: AnalyticsService/Dockerfile
     ports:
       - "5004:8080"
     environment:
@@ -94,7 +94,7 @@ services:
   api-gateway:
     build:
       context: .
-      dockerfile: ApiGateway/DockerFile
+      dockerfile: ApiGateway/Dockerfile
     ports:
       - "5006:8080"
     depends_on:

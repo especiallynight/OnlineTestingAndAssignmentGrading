@@ -118,6 +118,9 @@ namespace CourseService.Migrations
                     b.Property<int>("AssignmentId")
                         .HasColumnType("integer");
 
+                    b.Property<JsonElement?>("CorrectAnswer")
+                        .HasColumnType("jsonb");
+
                     b.Property<JsonElement?>("QuestionOptions")
                         .HasColumnType("jsonb");
 

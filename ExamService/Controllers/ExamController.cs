@@ -3,10 +3,13 @@ using ExamService.Data;
 using ExamService.DTOs;
 using ExamService.Enums;
 using ExamService.Models;
+using MassTransit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Shared.Events;
 using System.Security.Claims;
+
 
 namespace ExamService.Controllers
 {
@@ -16,10 +19,14 @@ namespace ExamService.Controllers
     public class ExamController : ControllerBase
     {
         private readonly ExamDbContext _context;
+        private readonly IPublishEndpoint _publishEndpoint;
 
-        public ExamController(ExamDbContext context)
+        public ExamController(
+            ExamDbContext context,
+            IPublishEndpoint publishEndpoint)
         {
             _context = context;
+            _publishEndpoint = publishEndpoint;
         }
 
         private int? GetUserId()
@@ -47,8 +54,7 @@ namespace ExamService.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Student")]
-        public async Task<ActionResult<ExamAttemptResponseDTO>> CreateAttempt(
-            [FromBody] CreateExamAttemptDTO dto)
+        public async Task<ActionResult<ExamAttemptResponseDTO>> CreateAttempt([FromBody] CreateExamAttemptDTO dto)
         {
             var userId = GetUserId();
 
@@ -99,8 +105,7 @@ namespace ExamService.Controllers
         }
 
         [HttpGet("attempt/{attemptId:int}")]
-        public async Task<ActionResult<ExamAttemptResponseDTO>> GetAttemptById(
-            int attemptId)
+        public async Task<ActionResult<ExamAttemptResponseDTO>> GetAttemptById(int attemptId)
         {
             var userId = GetUserId();
 
@@ -123,9 +128,7 @@ namespace ExamService.Controllers
 
         [HttpPost("{attemptId:int}/start")]
         [Authorize(Roles = "Student")]
-        public async Task<ActionResult<ExamAttemptResponseDTO>> StartAttempt(
-            int attemptId,
-            [FromBody] StartAttemptDTO dto)
+        public async Task<ActionResult<ExamAttemptResponseDTO>> StartAttempt( int attemptId,[FromBody] StartAttemptDTO dto)
         {
             var userId = GetUserId();
 
@@ -154,8 +157,7 @@ namespace ExamService.Controllers
         }
 
         [HttpPut("{attemptId:int}/stop")]
-        public async Task<ActionResult<ExamAttemptResponseDTO>> StopAttempt(
-            int attemptId)
+        public async Task<ActionResult<ExamAttemptResponseDTO>> StopAttempt(int attemptId)
         {
             var userId = GetUserId();
 
@@ -178,9 +180,31 @@ namespace ExamService.Controllers
 
             if (attempt.DeadlineAt != null &&
                 DateTimeOffset.UtcNow > attempt.DeadlineAt.Value)
+            {
                 attempt.Status = ExamAttemptStatus.Expired;
+            }
             else
+            {
                 attempt.Status = ExamAttemptStatus.Completed;
+
+                var answers = await _context.Answers
+                    .Where(a => a.AttemptId == attempt.AttemptId)
+                    .Select(a => new SubmittedAnswer
+                    {
+                        QuestionId = a.QuestionId,
+                        AnswerData = a.AnswerData,
+                        CodeScore = a.Score
+                    })
+                    .ToListAsync();
+
+                await _publishEndpoint.Publish(new TestSubmittedEvent
+                {
+                    AttemptId = attempt.AttemptId,
+                    StudentId = attempt.StudentId,
+                    AssignmentId = attempt.AssignmentId,
+                    Answers = answers
+                });
+            }
 
             await _context.SaveChangesAsync();
 

@@ -4,9 +4,15 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
+using Serilog;
 using System.Text;
+using GradingService.Consumers;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((context, configuration) =>
+    configuration.ReadFrom.Configuration(context.Configuration)
+                 .WriteTo.Console());
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secretKey = jwtSettings["SecretKey"];
@@ -50,12 +56,13 @@ builder.Services.AddDbContext<GradesDbContext>(options =>
 builder.Services.AddMassTransit(x =>
 {
     x.SetKebabCaseEndpointNameFormatter();
-
+    x.AddConsumer<TestSubmittedConsumer>();
     x.AddEntityFrameworkOutbox<GradesDbContext>(o =>
     {
         o.UsePostgres();
         o.UseBusOutbox();
     });
+
 
     x.UsingRabbitMq((context, cfg) =>
     {
@@ -111,6 +118,7 @@ builder.Services.AddHttpClient("AnalyticsService", client =>
 
 var app = builder.Build();
 
+app.UseSerilogRequestLogging();
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {

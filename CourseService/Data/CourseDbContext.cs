@@ -42,6 +42,10 @@ namespace CourseService.Data
             modelBuilder.Entity<Question>()
                 .Property(question => question.TestCases)
                 .HasColumnType("jsonb");
+            
+            modelBuilder.Entity<Question>()
+                .Property(question => question.CorrectAnswer)
+                .HasColumnType("jsonb");
 
 
         }

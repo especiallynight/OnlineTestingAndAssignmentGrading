@@ -18,8 +18,7 @@ public class ExamControllerTests
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
         new Claim(ClaimTypes.NameIdentifier, userId),
-        new Claim(ClaimTypes.Role, "Student")
-    }, "Test"));
+        new Claim(ClaimTypes.Role, "Student")}, "Test"));
 
         return new ExamController(db)
         {
@@ -80,18 +79,33 @@ public class ExamControllerTests
         Assert.IsType<ConflictObjectResult>(result.Result);
     }
 
-    //При старте экзамена попытка должна создаваться со статусом "InProgress" и корректным временем.
+    // Студент не может запустить попытку другого студента.
     [Fact]
-    public async Task StartAttempt_ValidData()
+    public async Task StartAttempt_ForbiddenForAnotherStudent()
     {
-        int studentId = 1;
-        int assignmentId = 10;
+        var options = new DbContextOptionsBuilder<ExamDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
 
-        var result = new { AttemptId = 1, Status = "InProgress", StartedAt = DateTime.UtcNow };
+        using var context = new ExamDbContext(options);
 
-        Assert.NotNull(result);
-        Assert.Equal("InProgress", result.Status); 
-        Assert.True(result.StartedAt <= DateTime.UtcNow);
+        context.ExamAttempts.Add(new ExamAttempt
+        {
+            AttemptId = 1,
+            StudentId = 2,
+            AssignmentId = 10,
+            Status = ExamAttemptStatus.InProgress
+        });
+
+        await context.SaveChangesAsync();
+
+        var controller = GetController(context, "1");
+
+        var result = await controller.StartAttempt(
+            1,
+            new StartAttemptDTO { TimeLimitMinutes = 60 });
+
+        Assert.IsType<ForbidResult>(result.Result);
     }
-
 }
+

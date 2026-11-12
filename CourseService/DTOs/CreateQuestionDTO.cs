@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
 namespace CourseService.DTOs
@@ -16,6 +17,9 @@ namespace CourseService.DTOs
 
         [Required(ErrorMessage = "Параметры вопроса обязательны")]
         public JsonElement? Options { get; set; }
+
+        public JsonElement? CorrectAnswer { get; set; }
+
         public JsonElement? TestCases { get; set; }
     }
 }

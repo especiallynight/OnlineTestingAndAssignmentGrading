@@ -1,4 +1,5 @@
-﻿using CourseService.Data;
+﻿
+using CourseService.Data;
 using CourseService.DTOs;
 using CourseService.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -40,7 +41,7 @@ namespace CourseService.Controllers
                     assignment_id = question.AssignmentId,
                     text = question.QuestionText,
                     type = question.QuestionType,
-                    options = question.QuestionOptions,
+                    options = question.QuestionOptions
                 })
                 .ToListAsync();
 
@@ -57,7 +58,7 @@ namespace CourseService.Controllers
             {
                 return Unauthorized();
             }
-            
+
             var assignment = await _context.Assignments
                 .Include(assignment => assignment.Course)
                 .FirstOrDefaultAsync(assignment => assignment.AssignmentId == assignment_id);
@@ -76,9 +77,85 @@ namespace CourseService.Controllers
             {
                 return Forbid();
             }
+
             if (dto.Options == null)
             {
                 return BadRequest("Необходимо указать параметры вопроса");
+            }
+
+            if (dto.QuestionType == "SingleChoice" ||
+                dto.QuestionType == "MultipleChoice")
+            {
+                if (dto.Options.Value.ValueKind != JsonValueKind.Object)
+                {
+                    return BadRequest("Варианты ответа должны быть объектом.");
+                }
+
+                if (dto.Options.Value.EnumerateObject()
+                    .Any(option => option.Value.ValueKind != JsonValueKind.String))
+                {
+                    return BadRequest("Текст вариантов ответа должен быть строкой.");
+                }
+
+                if (dto.CorrectAnswer == null)
+                {
+                    return BadRequest("Необходимо указать правильный ответ.");
+                }
+
+                if (dto.QuestionType == "SingleChoice")
+                {
+                    if (dto.CorrectAnswer.Value.ValueKind != JsonValueKind.String)
+                    {
+                        return BadRequest("Для SingleChoice правильный ответ должен быть строкой.");
+                    }
+
+                    var answer = dto.CorrectAnswer.Value.GetString();
+
+                    if (string.IsNullOrWhiteSpace(answer) ||
+                        !dto.Options.Value.TryGetProperty(answer, out _))
+                    {
+                        return BadRequest("Правильный ответ отсутствует среди вариантов.");
+                    }
+                }
+
+                if (dto.QuestionType == "MultipleChoice")
+                {
+                    if (dto.CorrectAnswer.Value.ValueKind != JsonValueKind.Array)
+                    {
+                        return BadRequest("Для MultipleChoice правильный ответ должен быть массивом.");
+                    }
+
+                    var answers = dto.CorrectAnswer.Value.EnumerateArray().ToList();
+
+                    if (answers.Count == 0 ||
+                        answers.Any(answer => answer.ValueKind != JsonValueKind.String))
+                    {
+                        return BadRequest("Укажите хотя бы один правильный вариант.");
+                    }
+
+                    foreach (var answer in answers)
+                    {
+                        var key = answer.GetString();
+
+                        if (string.IsNullOrWhiteSpace(key) ||
+                            !dto.Options.Value.TryGetProperty(key, out _))
+                        {
+                            return BadRequest("Один из правильных ответов отсутствует среди вариантов.");
+                        }
+                    }
+
+                    if (answers.Select(answer => answer.GetString()).Distinct().Count() != answers.Count)
+                    {
+                        return BadRequest("Правильные ответы не должны повторяться.");
+                    }
+                }
+            }
+            else if (dto.QuestionType == "Code")
+            {
+                if (dto.CorrectAnswer != null)
+                {
+                    return BadRequest("Для вопросов типа Code правильный ответ не указывается.");
+                }
             }
 
             if (dto.QuestionType == "Code")
@@ -101,6 +178,7 @@ namespace CourseService.Controllers
                 QuestionText = dto.QuestionText,
                 QuestionType = dto.QuestionType,
                 QuestionOptions = dto.Options.Value.Clone(),
+                CorrectAnswer = dto.CorrectAnswer?.Clone(),
                 TestCases = dto.TestCases?.Clone()
             };
 
@@ -109,7 +187,7 @@ namespace CourseService.Controllers
             await _context.SaveChangesAsync();
 
             return StatusCode(201, new
-            {   
+            {
                 question_id = question.QuestionId,
                 message = "Вопрос успешно добавлен"
             });
