@@ -60,8 +60,7 @@ mongodb-data/
 
 # Дампы баз данных
 *.sql
-*.sql.gz
-*.dump
+!docker/*.sql
 
 # Системные файлы ОС
 Thumbs.db
