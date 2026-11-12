@@ -7,7 +7,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-
+using MassTransit;
+using Microsoft.Extensions.Configuration;
+using Moq;
+using Moq.Protected;
 
 namespace ExamService.Tests;
 
@@ -20,7 +23,27 @@ public class ExamControllerTests
         new Claim(ClaimTypes.NameIdentifier, userId),
         new Claim(ClaimTypes.Role, "Student")}, "Test"));
 
-        return new ExamController(db)
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync",
+            ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    "{\"timeLimitMinutes\":60,\"maxScore\":100,\"courseId\":1,\"questionCount\":3}")
+            });
+
+        var factory = new Mock<IHttpClientFactory>();
+        factory.Setup(f => f.CreateClient(It.IsAny<string>()))
+            .Returns(new HttpClient(handler.Object));
+
+        var config = new ConfigurationBuilder().AddInMemoryCollection(
+            new Dictionary<string, string?>
+            {
+            { "Services:CourseService", "http://localhost/" },
+            { "InternalApiKey", "test-key" }
+            }).Build();
+
+        return new ExamController(db, new Mock<IPublishEndpoint>().Object, factory.Object, config)
         {
             ControllerContext = new ControllerContext
             {
@@ -28,6 +51,7 @@ public class ExamControllerTests
             }
         };
     }
+
 
     // Проверяет успешный запуск попытки экзамена.
     // Ожидает: OkObjectResult, Status = InProgress.
