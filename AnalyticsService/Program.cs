@@ -112,4 +112,10 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
 app.MapHub<AnalyticsService.Hubs.GradingHub>("/gradingHub");
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AnalyticsDbContext>();
+    await db.Database.MigrateAsync();
+}
+
 app.Run();
