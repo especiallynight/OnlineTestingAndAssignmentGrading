@@ -92,7 +92,9 @@ public class TestSubmittedConsumer : IConsumer<TestSubmittedEvent>
             return;
         }
 
-        var questionWeight = maxScore / message.Answers.Count;
+        var questionCount = assignment.GetProperty("questionCount").GetInt32();
+        var questionWeight = questionCount > 0 ? maxScore / questionCount : 0m;
+        
         decimal totalScore = 0;
         var feedback = new List<string>();
 
@@ -138,11 +140,7 @@ public class TestSubmittedConsumer : IConsumer<TestSubmittedEvent>
             }
             else
             {
-                fraction = answer.CodeScore ?? 0m;
-
-                if (fraction > 1m)
-                    fraction /= 100m;
-
+                fraction = (answer.CodeScore ?? 0m) / 100m;
                 fraction = Math.Clamp(fraction, 0m, 1m);
             }
 
