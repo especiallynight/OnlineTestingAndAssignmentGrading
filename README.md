@@ -14,8 +14,8 @@
 
 Веб-клиент: ASP.NET Core MVC
 
-СУБД: PostgreSQL 
-брокер сообщений: RabbitMQ 
+СУБД: PostgreSQL
+брокер сообщений: RabbitMQ
 
 Docker: 4.56.0
 
@@ -33,36 +33,51 @@ Docker: 4.56.0
 
 
 
-Требования: .NET SDK 10, Docker 4.56.0.
+1\. Скопировать `.env.example` в `.env`
 
-Запуск: docker compose up --build
+2\. `docker compose up --build`
 
-
-
-Адреса сервисов и порты.
-
-ASP.NET Core MVC: 
+3\. Отдельно запустить проверку кода: `dotnet run --project CodeExecutionService`
 
 
 
-Swagger:
+| Компонент | Адрес |
+
+|---|---|
+
+| Веб-клиент | http://localhost:5000 |
+
+| API Gateway | http://localhost:5006 |
+
+| Identity (Swagger) | http://localhost:5005 |
+
+| Course | http://localhost:5001 |
+
+| Exam | http://localhost:5002 |
+
+| Grading | http://localhost:5003 |
+
+| Analytics | http://localhost:5004 |
+
+| RabbitMQ UI | http://localhost:15672 (guest/guest) |
 
 
 
-PostgreSQL:
+\## Тестовые учётные записи
 
 
 
-RabbitMQ Management UI: 
+| Роль | Email | Пароль |
 
+|---|---|---|
 
+| Admin | admin@demo.local | Demo123! |
 
-Тестовые учётные записи.
+| Teacher | teacher@demo.local | Demo123! |
 
+| Student | student@demo.local | Demo123! |
 
-
-Демонстрационные учётные записи будут добавлены после реализации авторизации и тестового наполнения базы данных.
-
+## 
 
 ## Реализованная функциональность
 
