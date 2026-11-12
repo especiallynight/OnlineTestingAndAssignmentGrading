@@ -109,13 +109,6 @@ builder.Services.AddSwaggerGen(options =>
 
 }); ;
 
-builder.Services.AddHttpClient("AnalyticsService", client =>
-{
-    client.BaseAddress = new Uri(
-        builder.Configuration["Services:AnalyticsService"]!
-    );
-});
-
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
@@ -131,5 +124,11 @@ app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<GradesDbContext>();
+    await db.Database.MigrateAsync();
+}
 
 app.Run();
