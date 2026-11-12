@@ -20,13 +20,19 @@ namespace ExamService.Controllers
     {
         private readonly ExamDbContext _context;
         private readonly IPublishEndpoint _publishEndpoint;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly IConfiguration _configuration;
 
         public ExamController(
             ExamDbContext context,
-            IPublishEndpoint publishEndpoint)
+            IPublishEndpoint publishEndpoint,
+            IHttpClientFactory httpClientFactory,
+            IConfiguration configuration)
         {
             _context = context;
             _publishEndpoint = publishEndpoint;
+            _httpClientFactory = httpClientFactory;
+            _configuration = configuration;
         }
 
         private int? GetUserId()
@@ -146,13 +152,29 @@ namespace ExamService.Controllers
             if (attempt.StartedAt != null)
                 return Conflict("Попытка уже начата");
 
+            var courseUrl = _configuration["Services:CourseService"];
+            var apiKey = _configuration["InternalApiKey"];
+            if (string.IsNullOrWhiteSpace(courseUrl) || string.IsNullOrWhiteSpace(apiKey))
+                return StatusCode(500, "Не настроен доступ к CourseService");
+
+            var client = _httpClientFactory.CreateClient();
+            using var req = new HttpRequestMessage(
+                HttpMethod.Get,
+                $"{courseUrl}/internal/assignments/{attempt.AssignmentId}");
+            req.Headers.Add("X-Internal-Api-Key", apiKey);
+
+            using var resp = await client.SendAsync(req);
+            if (!resp.IsSuccessStatusCode)
+                return StatusCode(502, "Не удалось получить задание");
+
+            using var json = System.Text.Json.JsonDocument.Parse(
+                await resp.Content.ReadAsStringAsync());
+            var limit = json.RootElement.GetProperty("timeLimitMinutes").GetInt32();
+
             attempt.Status = ExamAttemptStatus.InProgress;
             attempt.StartedAt = DateTimeOffset.UtcNow;
-            attempt.DeadlineAt = attempt.StartedAt.Value
-                .AddMinutes(dto.TimeLimitMinutes);
-
+            attempt.DeadlineAt = attempt.StartedAt.Value.AddMinutes(limit);
             await _context.SaveChangesAsync();
-
             return Ok(ToDTO(attempt));
         }
 
