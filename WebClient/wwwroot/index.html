@@ -1,0 +1,45 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд — OnlineTesting</title>
+    <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+    <header id="app-header" class="app-header"></header>
+
+    <main>
+        <div class="container">
+            <div class="page-head">
+                <div>
+                    <h1>Дашборд</h1>
+                    <p class="page-subtitle" id="dashboard-subtitle">Сводка по вашей роли в системе.</p>
+                    <span class="service-note">Сервис: ApiGateway</span>
+                </div>
+                <div id="dashboard-actions"></div>
+            </div>
+
+            <div class="stats-grid" id="dashboard-stats"></div>
+
+            <div class="section-head">
+                <h2 class="section-title" id="dashboard-main-title">Основное</h2>
+                <span class="muted small" id="dashboard-main-note"></span>
+            </div>
+            <div id="dashboard-main-table"></div>
+
+            <div class="section-head">
+                <h2 class="section-title" id="dashboard-secondary-title">Дополнительно</h2>
+            </div>
+            <div class="cards-grid" id="dashboard-secondary"></div>
+        </div>
+    </main>
+
+    <footer id="app-footer" class="app-footer"></footer>
+
+    <script src="./js/data.js"></script>
+    <script src="./js/layout.js"></script>
+    <script src="./js/app.js"></script>
+    <script src="./js/pages/home.js"></script>
+</body>
+</html>
