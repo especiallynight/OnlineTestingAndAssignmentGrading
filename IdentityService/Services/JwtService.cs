@@ -18,6 +18,7 @@ namespace IdentityService.Services
             var claims = new List<Claim>
 {
                 new Claim(ClaimTypes.NameIdentifier, user_id.ToString()),
+                new Claim("sub", user_id.ToString()),
                 new Claim("role", role)
             };
 

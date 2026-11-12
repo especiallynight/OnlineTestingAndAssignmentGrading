@@ -96,4 +96,23 @@ app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+    await db.Database.MigrateAsync();
+    if (!await db.Users.AnyAsync())
+    {
+        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
+        var users = new[]
+        {
+            new User { FirstName="Admin",   LastName="Demo", Email="admin@demo.local",   Role=IdentityService.Enums.UserRole.Admin },
+            new User { FirstName="Teacher", LastName="Demo", Email="teacher@demo.local", Role=IdentityService.Enums.UserRole.Teacher },
+            new User { FirstName="Student", LastName="Demo", Email="student@demo.local", Role=IdentityService.Enums.UserRole.Student }
+        };
+        foreach (var u in users) u.PasswordHash = hasher.HashPassword(u, "Demo12345");
+        db.Users.AddRange(users);
+        await db.SaveChangesAsync();
+    }
+}
+
 app.Run();
