@@ -26,10 +26,6 @@ namespace AnalyticsService.Data
                 .Property(s => s.ProcessedAttemptIds)
                 .HasColumnType("integer[]");
             
-            modelBuilder.Entity<StudentStatistics>()
-                .Property(s => s.ProcessedAttemptIds)
-                .HasColumnType("jsonb");
-
         }
 
     }
