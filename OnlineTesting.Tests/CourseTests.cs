@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Microsoft.Extensions.Caching.Distributed;
+using Moq;
 
 namespace OnlineTesting.Tests
 {
@@ -23,11 +25,11 @@ namespace OnlineTesting.Tests
         {
             var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
             {
-                new Claim(ClaimTypes.NameIdentifier, userId),
-                new Claim(ClaimTypes.Role, role)
-            }, "TestAuth"));
-
-            return new CourseController(db)
+        new Claim(ClaimTypes.NameIdentifier, userId),
+        new Claim(ClaimTypes.Role, role)
+    }, "TestAuth"));
+            var cacheMock = new Mock<IDistributedCache>();
+            return new CourseController(db, cacheMock.Object)
             {
                 ControllerContext = new ControllerContext
                 {
