@@ -250,13 +250,16 @@ namespace ExamService.Controllers
                     return BadRequest("Тесты задания не найдены");
                 }
 
-                var executionResponse = await client.PostAsJsonAsync(
-                    $"{codeExecutionServiceUrl}/api/code-execution/run",
-                    new CodeSubmissionRequest
+                using var execRequest = new HttpRequestMessage(HttpMethod.Post, $"{codeExecutionServiceUrl}/api/code-execution/run")
+                {
+                    Content = JsonContent.Create(new CodeSubmissionRequest
                     {
                         SourceCode = answer.AnswerData,
                         TestCases = testsData.TestCases
-                    });
+                    })
+                };
+                execRequest.Headers.Add("X-Internal-Api-Key", internalApiKey);
+                var executionResponse = await client.SendAsync(execRequest);
 
                 if (!executionResponse.IsSuccessStatusCode)
                 {
