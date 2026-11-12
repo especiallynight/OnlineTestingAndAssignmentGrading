@@ -7,7 +7,7 @@ namespace CourseService.DTOs
     public class CreateQuestionDTO
     {
         [Required(ErrorMessage = "Текст вопроса обязателен")]
-        [MaxLength(100, ErrorMessage = "Название курса не должно превышать 100 символов")]
+        [MaxLength(100, ErrorMessage = "Текст вопроса не должнен превышать 100 символов")]
         [MinLength(3, ErrorMessage = "Текст вопроса должен содержать минимум 3 символа")]
         public string QuestionText { get; set; } = string.Empty;
 

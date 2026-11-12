@@ -5,10 +5,10 @@ namespace CourseService.DTOs
     public class CreateCourseDTO
     {
         [Required(ErrorMessage = "Название курса обязательно")]
-        [MaxLength(100, ErrorMessage = "Текст курса должен содержать минимум 3 символа")]
+        [MaxLength(100, ErrorMessage = "Название курса не должен превышать 100 символов")]
         [MinLength(3, ErrorMessage = "Название курса должно содержать минимум 3 символа")]
         public string Name { get; set; } = string.Empty;
-        [MaxLength(150, ErrorMessage = "Описание курса не должно превышать 100 символов")]
+        [MaxLength(150, ErrorMessage = "Описание курса не должно превышать 150 символов")]
         public string? Description { get; set; }
     }
 }
