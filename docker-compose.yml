@@ -1,120 +1,26 @@
-version: '3.8'
-
 services:
-  course-service:
-    build:
-      context: .
-      dockerfile: CourseService/Dockerfile
-    ports:
-      - "5001:8080"
+  postgres:
+    image: postgres:16-alpine
     environment:
-      Jwt__SecretKey: ${JWT_SECRET_KEY}
-      Jwt__Issuer: IdentityService
-      Jwt__Audience: OnlineTesting
-      InternalApiKey: ${INTERNAL_API_KEY}
-      ConnectionStrings__DefaultConnection: "Host=host.docker.internal;Port=5432;Database=DBCourse;Username=postgres;Password=${DB_PASSWORD}"
-    restart: unless-stopped
-
-  exam-service:
-    build:
-      context: .
-      dockerfile: ExamService/Dockerfile
-    ports:
-      - "5002:8080"
-    environment:
-      Jwt__SecretKey: ${JWT_SECRET_KEY}
-      Jwt__Issuer: IdentityService
-      Jwt__Audience: OnlineTesting
-      ConnectionStrings__DefaultConnection: "Host=host.docker.internal;Port=5432;Database=DBExam;Username=postgres;Password=${DB_PASSWORD}"
-      Services__CourseService: http://course-service:8080
-      Services__CodeExecutionService: http://host.docker.internal:5007
-      InternalApiKey: ${INTERNAL_API_KEY}
-      RabbitMQ__Host: rabbitmq
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    restart: unless-stopped
-
-  grading-service:
-    build:
-      context: .
-      dockerfile: GradingService/Dockerfile
-    ports:
-      - "5003:8080"
-    environment:
-      Jwt__SecretKey: ${JWT_SECRET_KEY}
-      Jwt__Issuer: IdentityService
-      Jwt__Audience: OnlineTesting
-      ConnectionStrings__DefaultConnection: "Host=host.docker.internal;Port=5432;Database=DBGrade;Username=postgres;Password=${DB_PASSWORD}"
-      Services__ExamService: http://exam-service:8080
-      Services__CourseService: http://course-service:8080
-      RabbitMQ__Host: rabbitmq
-    depends_on:
-      exam-service:
-        condition: service_started
-      course-service:
-        condition: service_started
-      rabbitmq:
-        condition: service_healthy
-    restart: unless-stopped
-
-  analytics-service:
-    build:
-      context: .
-      dockerfile: AnalyticsService/Dockerfile
-    ports:
-      - "5004:8080"
-    environment:
-      Jwt__SecretKey: ${JWT_SECRET_KEY}
-      Jwt__Issuer: IdentityService
-      Jwt__Audience: OnlineTesting
-      ConnectionStrings__DefaultConnection: "Host=host.docker.internal;Port=5432;Database=DBAnal;Username=postgres;Password=${DB_PASSWORD}"
-      RabbitMQ__Host: rabbitmq
-      Redis__ConnectionString: "redis:6379"
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-
-  identity-service:
-    build:
-      context: .
-      dockerfile: IdentityService/Dockerfile
-    ports:
-      - "5005:8080"
-    environment:
-      Jwt__SecretKey: ${JWT_SECRET_KEY}
-      Jwt__Issuer: IdentityService
-      Jwt__Audience: OnlineTesting
-      ConnectionStrings__DefaultConnection: "Host=host.docker.internal;Port=5432;Database=DBIdentity;Username=postgres;Password=${DB_PASSWORD}"
-    restart: unless-stopped
-
-  api-gateway:
-    build:
-      context: .
-      dockerfile: ApiGateway/Dockerfile
-    ports:
-      - "5006:8080"
-    depends_on:
-      - identity-service
-      - course-service
-      - exam-service
-      - grading-service
-      - analytics-service
-    restart: unless-stopped
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   rabbitmq:
     image: rabbitmq:3.13-management
-    container_name: rabbitmq
     hostname: rabbitmq
-    ports:
-      - "5672:5672"
-      - "15672:15672"
+    ports: ["5672:5672", "15672:15672"]
     environment:
-      - RABBITMQ_DEFAULT_USER=guest
-      - RABBITMQ_DEFAULT_PASS=guest
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
       interval: 10s
@@ -123,12 +29,99 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: redis
-    hostname: redis
-    ports:
-      - "6379:6379"
+    ports: ["6379:6379"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  identity-service:
+    build: { context: ., dockerfile: IdentityService/Dockerfile }
+    ports: ["5005:8080"]
+    environment:
+      Jwt__SecretKey: ${JWT_SECRET_KEY}
+      Jwt__Issuer: IdentityService
+      Jwt__Audience: OnlineTesting
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=DBIdentity;Username=postgres;Password=${DB_PASSWORD}"
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+  course-service:
+    build: { context: ., dockerfile: CourseService/Dockerfile }
+    ports: ["5001:8080"]
+    environment:
+      Jwt__SecretKey: ${JWT_SECRET_KEY}
+      Jwt__Issuer: IdentityService
+      Jwt__Audience: OnlineTesting
+      InternalApiKey: ${INTERNAL_API_KEY}
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=DBCourse;Username=postgres;Password=${DB_PASSWORD}"
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: unless-stopped
+
+  exam-service:
+    build: { context: ., dockerfile: ExamService/Dockerfile }
+    ports: ["5002:8080"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    environment:
+      Jwt__SecretKey: ${JWT_SECRET_KEY}
+      Jwt__Issuer: IdentityService
+      Jwt__Audience: OnlineTesting
+      InternalApiKey: ${INTERNAL_API_KEY}
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=DBExam;Username=postgres;Password=${DB_PASSWORD}"
+      Services__CourseService: http://course-service:8080
+      Services__CodeExecutionService: http://host.docker.internal:5203
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    restart: unless-stopped
+
+  grading-service:
+    build: { context: ., dockerfile: GradingService/Dockerfile }
+    ports: ["5003:8080"]
+    environment:
+      Jwt__SecretKey: ${JWT_SECRET_KEY}
+      Jwt__Issuer: IdentityService
+      Jwt__Audience: OnlineTesting
+      InternalApiKey: ${INTERNAL_API_KEY}
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=DBGrade;Username=postgres;Password=${DB_PASSWORD}"
+      Services__ExamService: http://exam-service:8080
+      Services__CourseService: http://course-service:8080
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    restart: unless-stopped
+
+  analytics-service:
+    build: { context: ., dockerfile: AnalyticsService/Dockerfile }
+    ports: ["5004:8080"]
+    environment:
+      Jwt__SecretKey: ${JWT_SECRET_KEY}
+      Jwt__Issuer: IdentityService
+      Jwt__Audience: OnlineTesting
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=DBAnal;Username=postgres;Password=${DB_PASSWORD}"
+      Redis__ConnectionString: "redis:6379"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  api-gateway:
+    build: { context: ., dockerfile: ApiGateway/Dockerfile }
+    ports: ["5006:8080"]
+    depends_on: [identity-service, course-service, exam-service, grading-service, analytics-service]
+    restart: unless-stopped
+
+  web-client:
+    build: { context: ., dockerfile: WebClient/Dockerfile }
+    ports: ["5000:8080"]
+    environment:
+      GatewayUrl: http://api-gateway:8080
+    depends_on: [api-gateway]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
