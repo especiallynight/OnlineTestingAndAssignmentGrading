@@ -11,6 +11,8 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
+
 builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration)
                  .WriteTo.Console());
@@ -109,7 +111,7 @@ using (var scope = app.Services.CreateScope())
             new User { FirstName="Teacher", LastName="Demo", Email="teacher@demo.local", Role=IdentityService.Enums.UserRole.Teacher },
             new User { FirstName="Student", LastName="Demo", Email="student@demo.local", Role=IdentityService.Enums.UserRole.Student }
         };
-        foreach (var u in users) u.PasswordHash = hasher.HashPassword(u, "Demo12345");
+        foreach (var u in users) u.PasswordHash = hasher.HashPassword(u, "Demo123!");
         db.Users.AddRange(users);
         await db.SaveChangesAsync();
     }
