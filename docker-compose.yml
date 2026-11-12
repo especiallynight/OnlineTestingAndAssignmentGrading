@@ -56,9 +56,11 @@ services:
       Jwt__Issuer: IdentityService
       Jwt__Audience: OnlineTesting
       InternalApiKey: ${INTERNAL_API_KEY}
+      Redis__ConnectionString: "redis:6379"
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=DBCourse;Username=postgres;Password=${DB_PASSWORD}"
     depends_on:
       postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
     restart: unless-stopped
 
   exam-service:

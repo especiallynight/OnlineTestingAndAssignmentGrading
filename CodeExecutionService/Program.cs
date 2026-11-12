@@ -20,6 +20,19 @@ app.UseSerilogRequestLogging();
 app.UseSwagger();
 app.UseSwaggerUI();
 
+app.Use(async (ctx, next) =>
+{
+    var key = builder.Configuration["InternalApiKey"];
+    if (!string.IsNullOrEmpty(key) && ctx.Request.Path.StartsWithSegments("/api"))
+    {
+        if (ctx.Request.Headers["X-Internal-Api-Key"] != key)
+        {
+            ctx.Response.StatusCode = 401;
+            return;
+        }
+    }
+    await next();
+});
 app.MapControllers();
 
 app.Run();
