@@ -146,7 +146,9 @@ namespace CourseService.Controllers
                 {
                     a.AssignmentId,
                     a.CourseId,
-                    a.MaxScore
+                    a.MaxScore,
+                    a.TimeLimitMinutes,
+                    QuestionCount = a.Questions.Count
                 })
                 .FirstOrDefaultAsync();
 
