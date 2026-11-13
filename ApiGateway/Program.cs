@@ -12,6 +12,23 @@ builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange
 
 builder.Services.AddOcelot(builder.Configuration);
 
+// Клиент обращается к gateway с другого origin: локально это порт 5238,
+// в Docker — 5000. Без этой политики браузер блокирует запросы.
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+        policy
+            .WithOrigins(
+                "http://localhost:5000",
+                "http://localhost:5238",
+                "http://localhost:5130",
+                "http://localhost:8080",
+                "https://localhost:7261",
+                "https://localhost:7114")
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
+
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
@@ -30,6 +47,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
+app.UseCors();
 await app.UseOcelot();
 
 app.Run();
