@@ -23,7 +23,7 @@
 
   function getTeacherCourses() {
     return state.courses.filter(function (course) {
-      return course.teacherId === state.user.id;
+      return String(course.teacherId) === String(state.user.id);
     });
   }
 
@@ -331,12 +331,16 @@
       submitLabel: 'Создать тест',
       body:
         '<div class="form-field">' +
-        '<label for="new-test-course">Курс</label>' +
-        '<select id="new-test-course" name="courseId">' +
-        courses.map(function (course) {
-          return '<option value="' + course.id + '">' + App.escapeHtml(course.title) + '</option>';
+        '<label>Курс</label>' +
+        '<div class="options-list">' +
+        courses.map(function (course, index) {
+          return '<label class="option-row">' +
+            '<input type="radio" name="courseId" value="' + course.id + '"' +
+            (index === 0 ? ' checked' : '') + '>' +
+            '<span>' + App.escapeHtml(course.title) + '</span>' +
+            '</label>';
         }).join('') +
-        '</select>' +
+        '</div>' +
         '</div>' +
         '<div class="form-field">' +
         '<label for="new-test-name">Название</label>' +
