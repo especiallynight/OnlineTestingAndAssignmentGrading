@@ -8,7 +8,18 @@ builder.Host.UseSerilog((context, configuration) =>
                  .WriteTo.Console());
 
 builder.Services.AddControllers();
-builder.Services.AddScoped<ICodeRunner, DockerCodeRunner>();
+
+var codeRunner = builder.Configuration["CodeRunner"] ?? "docker";
+if (string.Equals(codeRunner, "process", StringComparison.OrdinalIgnoreCase))
+{
+    // Контейнерный режим: Docker-демон недоступен, код собирается
+    // и запускается внутри контейнера CodeExecutionService.
+    builder.Services.AddScoped<ICodeRunner, ProcessCodeRunner>();
+}
+else
+{
+    builder.Services.AddScoped<ICodeRunner, DockerCodeRunner>();
+}
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
