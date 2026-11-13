@@ -162,10 +162,23 @@ namespace ExamService.Controllers
                 DateTimeOffset.UtcNow > answer.Attempt.DeadlineAt.Value)
                 return Conflict("Время попытки истекло");
 
-            if (answer.Status != AnswerStatusEnum.Saved)
+            if (answer.Status == AnswerStatusEnum.Submitted)
                 return Conflict("Ответ нельзя изменить");
 
             answer.AnswerData = dto.AnswerData;
+
+            // Проверенный код можно исправить и отправить на проверку заново,
+            // пока попытка активна: прежний вердикт относится к старому коду.
+            if (answer.Status == AnswerStatusEnum.Graded)
+            {
+                answer.Status = AnswerStatusEnum.Saved;
+                answer.ExecutionStatus = null;
+                answer.PassedTests = null;
+                answer.TotalTests = null;
+                answer.Score = null;
+                answer.ExecutionError = null;
+                answer.SubmittedAt = null;
+            }
 
             await _context.SaveChangesAsync();
 
@@ -205,7 +218,7 @@ namespace ExamService.Controllers
                 DateTimeOffset.UtcNow > answer.Attempt.DeadlineAt.Value)
                 return Conflict("Время попытки истекло");
 
-            if (answer.Status != AnswerStatusEnum.Saved)
+            if (answer.Status == AnswerStatusEnum.Submitted)
                 return Conflict("Ответ уже отправлен");
 
             var courseServiceUrl =

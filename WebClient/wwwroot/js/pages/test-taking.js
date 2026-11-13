@@ -209,6 +209,15 @@
         if (textarea) {
           textarea.value = answer.data || '';
         }
+        if (answer.executionStatus) {
+          var resultHost = document.querySelector(
+            '[data-code-result="' + question.id + '"]');
+          if (resultHost) {
+            resultHost.textContent = 'Вердикт: ' + answer.executionStatus +
+              ', тесты: ' + (answer.passedTests || 0) +
+              ' из ' + (answer.totalTests || 0);
+          }
+        }
         return;
       }
 
@@ -344,11 +353,27 @@
 
     try {
       await waitForPendingSaves();
-      await Promise.all(state.questions.map(function (question) {
-        return saveQuestion(question);
-      }));
+
+      // Сохраняем ответы по одному. Если попытка уже закрыта (409),
+      // завершение всё равно должно пройти.
+      for (var i = 0; i < state.questions.length; i++) {
+        try {
+          await saveQuestion(state.questions[i]);
+        } catch (error) {
+          if (!error || error.status !== 409) {
+            throw error;
+          }
+        }
+      }
       await waitForPendingSaves();
-      await App.api.attempts.stop(state.attempt.id);
+
+      try {
+        await App.api.attempts.stop(state.attempt.id);
+      } catch (error) {
+        if (!error || error.status !== 409) {
+          throw error;
+        }
+      }
       clearInterval(state.timerId);
       App.notify(auto
         ? 'Время вышло. Работа отправлена.'
