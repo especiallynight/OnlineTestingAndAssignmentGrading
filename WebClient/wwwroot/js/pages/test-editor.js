@@ -211,7 +211,7 @@
   function openQuestionEditor(type, question) {
     var isEdit = !!question;
     App.openModal({
-      title: (isEdit ? 'Редактирование' : 'Новый') + ' вопрос: ' + TYPE_LABELS[type],
+      title: (isEdit ? 'Редактирование вопроса: ' : 'Новый вопрос: ') + TYPE_LABELS[type],
       submitLabel: isEdit ? 'Сохранить вопрос' : 'Добавить вопрос',
       body: buildQuestionBody(type, question),
       onSubmit: async function (form) {

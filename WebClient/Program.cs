@@ -18,7 +18,14 @@ app.UseSerilogRequestLogging();
 // Статический макет должен открываться по обычному HTTP локально,
 // поэтому HTTPS-редирект здесь намеренно не включён.
 app.UseDefaultFiles();
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        // Клиент не должен показывать устаревшие JS/CSS после обновления.
+        context.Context.Response.Headers.CacheControl = "no-cache";
+    }
+});
 app.UseRouting();
 app.UseAuthorization();
 app.MapControllerRoute(

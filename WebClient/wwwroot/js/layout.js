@@ -13,7 +13,7 @@
         { label: 'Дашборд', page: 'index.html' },
         { label: 'Курсы', page: 'courses.html' },
         { label: 'Мои результаты', page: 'my-results.html' },
-        { label: 'Посылки кода', page: 'code-submissions.html' }
+        { label: 'Проверка кода', page: 'code-submissions.html' }
       ];
     }
     if (role === 'teacher') {
@@ -22,7 +22,7 @@
         { label: 'Курсы', page: 'courses.html' },
         { label: 'Конструктор теста', page: 'test-editor.html' },
         { label: 'Проверка работ', page: 'grading.html' },
-        { label: 'Посылки кода', page: 'code-submissions.html' },
+        { label: 'Проверка кода', page: 'code-submissions.html' },
         { label: 'Аналитика', page: 'analytics.html' }
       ];
     }
