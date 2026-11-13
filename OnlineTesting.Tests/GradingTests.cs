@@ -23,7 +23,7 @@ namespace GradingService.Tests
             return new GradesDbContext(options);
         }
 
-        private GradeController GetController(GradesDbContext db)
+        private GradeController GetController(GradesDbContext db, string? attemptStatus = null)
         {
             var claims = new List<Claim>
             {
@@ -46,10 +46,14 @@ namespace GradingService.Tests
 
                     if (path.Contains("exam_attempts"))
                     {
+                        var status = attemptStatus == null
+                            ? string.Empty
+                            : ",\"status\":\"" + attemptStatus + "\"";
+
                         return new HttpResponseMessage(HttpStatusCode.OK)
                         {
                             Content = new StringContent(
-                                "{\"studentId\":1,\"assignmentId\":1}")
+                                "{\"studentId\":1,\"assignmentId\":1" + status + "}")
                         };
                     }
 
@@ -150,6 +154,29 @@ namespace GradingService.Tests
 
             Assert.IsType<CreatedAtActionResult>(result.Result);
             Assert.Single(context.AttemptGrades);
+        }
+
+        // Нельзя выставить оценку, пока попытка не завершена.
+        [Fact]
+        public async Task CreateGrade_WhenAttemptInProgress_ReturnsConflict()
+        {
+            using var context = GetDbContext();
+            var controller = GetController(context, "InProgress");
+
+            var dto = new AttemptGradedEvent
+            {
+                AttemptId = 1,
+                StudentId = 1,
+                CourseId = 1,
+                Score = 85,
+                MaxScore = 100,
+                GradedAt = DateTimeOffset.UtcNow
+            };
+
+            var result = await controller.CreateGrade(dto);
+
+            Assert.IsType<ConflictObjectResult>(result.Result);
+            Assert.Empty(context.AttemptGrades);
         }
 
         //Пытаемся создать оценку для той же попытки.

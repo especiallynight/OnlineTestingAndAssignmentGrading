@@ -182,6 +182,54 @@
     state.debouncers[question.id]();
   }
 
+  // Восстанавливает ответы, сохранённые в предыдущем заходе в тест.
+  async function restoreAnswers() {
+    var savedAnswers;
+    try {
+      savedAnswers = await App.api.attempts.answers(state.attempt.id);
+    } catch (error) {
+      return;
+    }
+
+    savedAnswers.forEach(function (answer) {
+      var question = state.questions.filter(function (item) {
+        return String(item.id) === String(answer.questionId);
+      })[0];
+      if (!question) {
+        return;
+      }
+
+      state.answers[question.id] = {
+        answerId: answer.answerId,
+        saved: answer.data
+      };
+
+      if (question.type === 'code') {
+        var textarea = document.getElementById('q-' + question.id);
+        if (textarea) {
+          textarea.value = answer.data || '';
+        }
+        return;
+      }
+
+      var values = [];
+      try {
+        var parsed = JSON.parse(answer.data);
+        values = Array.isArray(parsed) ? parsed : [parsed];
+      } catch (error) {
+        values = [answer.data];
+      }
+
+      values.forEach(function (value) {
+        var input = document.querySelector(
+          'input[name="q-' + question.id + '"][value="' + value + '"]');
+        if (input) {
+          input.checked = true;
+        }
+      });
+    });
+  }
+
   function bindAnswers() {
     state.questions.forEach(function (question) {
       var card = document.querySelector('[data-question="' + question.id + '"]');
@@ -344,8 +392,7 @@
     renderQuestions();
 
     state.attempt = await App.api.attempts.create(state.assignment.id);
-    state.attempt = await App.api.attempts.start(
-      state.attempt.id, state.assignment.timeLimitMinutes);
+    await restoreAnswers();
     startTimer();
   }
 

@@ -148,6 +148,7 @@
       "UpstreamPathTemplate": "/api/analytics/{everything}",
       "UpstreamHttpMethod": [ "Get", "Post" ],
       "DownstreamPathTemplate": "/api/analytics/{everything}",
+      "UpstreamScheme": "http",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -182,5 +183,7 @@
       "Timeout": 120000
     }
   ],
-  "GlobalConfiguration": { "BaseUrl": "http://localhost:8080" }
+  "GlobalConfiguration": {
+    "BaseUrl": "http://localhost:8080"
+  }
 }

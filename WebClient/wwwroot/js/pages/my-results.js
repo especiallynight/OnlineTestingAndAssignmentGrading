@@ -113,8 +113,13 @@
           if (!assignment) {
             return '';
           }
-          return '<a class="btn btn-sm btn-soft" href="' +
-            App.url('test-taking.html') + '?id=' + assignment.id + '">Пройти снова</a>';
+          if (attempt.status === 'in-progress') {
+            return '<a class="btn btn-sm btn-soft" href="' +
+              App.url('test-taking.html') + '?id=' + assignment.id + '">Продолжить</a>';
+          }
+          return '<span class="muted small">' +
+            (attempt.status === 'completed' ? 'Тест пройден' : 'Попытка использована') +
+            '</span>';
         }
       }
     ], state.attempts);

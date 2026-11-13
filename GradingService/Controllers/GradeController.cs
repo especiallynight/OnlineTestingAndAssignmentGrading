@@ -175,6 +175,20 @@ namespace GradingService.Controllers
             if (attempt == null)
                 return NotFound("Попытка не найдена");
 
+            // Оценку можно выставлять только по завершённой попытке.
+            if (attempt.RootElement.TryGetProperty("status", out var statusElement))
+            {
+                var statusText = statusElement.ValueKind == JsonValueKind.Number
+                    ? statusElement.GetInt32().ToString()
+                    : statusElement.GetString();
+
+                if (statusText == "0" ||
+                    string.Equals(statusText, "InProgress", StringComparison.OrdinalIgnoreCase))
+                {
+                    return Conflict("Нельзя выставить оценку, пока попытка не завершена.");
+                }
+            }
+
             var assignmentId = attempt.RootElement
                 .GetProperty("assignmentId")
                 .GetInt32();

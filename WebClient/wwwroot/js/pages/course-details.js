@@ -13,11 +13,17 @@
     questionsCount: {},
     role: null,
     user: null,
-    enrolled: false
+    enrolled: false,
+    attempts: {}
   };
 
   function courseId() {
     return App.getQueryParam('id');
+  }
+
+  // Возвращает последнюю попытку студента по заданию, если она есть.
+  function latestAttempt(assignmentId) {
+    return state.attempts[assignmentId] || null;
   }
 
   // Рисует шапку курса с основной информацией и действием.
@@ -132,8 +138,18 @@
         action = '<a class="btn btn-sm btn-outline" href="' +
           App.url('test-editor.html') + '?id=' + assignment.id + '">Редактировать</a>';
       } else if (state.enrolled) {
-        action = '<a class="btn btn-sm btn-soft" href="' +
-          App.url('test-taking.html') + '?id=' + assignment.id + '">Начать тест</a>';
+        var attempt = latestAttempt(assignment.id);
+        if (attempt && (attempt.status === 'completed' || attempt.status === 'expired')) {
+          action = '<span class="muted small">' +
+            (attempt.status === 'completed' ? 'Тест пройден' : 'Время попытки истекло') +
+            '</span>';
+        } else if (attempt) {
+          action = '<a class="btn btn-sm btn-soft" href="' +
+            App.url('test-taking.html') + '?id=' + assignment.id + '">Продолжить тест</a>';
+        } else {
+          action = '<a class="btn btn-sm btn-soft" href="' +
+            App.url('test-taking.html') + '?id=' + assignment.id + '">Начать тест</a>';
+        }
       } else {
         action = '<span class="muted small">Запишитесь на курс, чтобы пройти тест</span>';
       }
@@ -157,15 +173,34 @@
   // Рисует список тестов курса со ссылками по роли.
   function renderTests() {
     App.renderCards('course-tests', state.assignments.map(function (assignment) {
-      var canOpen = state.role === 'teacher' || state.enrolled;
       var page = state.role === 'teacher' ? 'test-editor.html' : 'test-taking.html';
+      var subtitle = assignment.timeLimitMinutes + ' минут · ' +
+        (state.questionsCount[assignment.id] || 0) + ' вопросов';
+      var href = '';
+      var hrefLabel = 'Начать тест';
+
+      if (state.role === 'teacher') {
+        href = App.url(page) + '?id=' + assignment.id;
+        hrefLabel = 'Редактировать тест';
+      } else if (state.enrolled) {
+        var attempt = latestAttempt(assignment.id);
+        if (attempt && (attempt.status === 'completed' || attempt.status === 'expired')) {
+          subtitle += attempt.status === 'completed'
+            ? ' · Тест пройден'
+            : ' · Время попытки истекло';
+        } else {
+          href = App.url(page) + '?id=' + assignment.id;
+          hrefLabel = attempt ? 'Продолжить тест' : 'Начать тест';
+        }
+      }
+
       return {
         title: assignment.title,
-        subtitle: assignment.timeLimitMinutes + ' минут · ' + (state.questionsCount[assignment.id] || 0) + ' вопросов',
+        subtitle: subtitle,
         text: assignment.description || 'Описание не заполнено.',
         badge: 'published',
-        href: canOpen ? App.url(page) + '?id=' + assignment.id : '',
-        hrefLabel: state.role === 'teacher' ? 'Редактировать тест' : 'Начать тест'
+        href: href,
+        hrefLabel: hrefLabel
       };
     }));
   }
@@ -215,6 +250,19 @@
         state.enrolled = !!enrollment.enrolled;
       } catch (error) {
         state.enrolled = false;
+      }
+
+      try {
+        var attempts = await App.api.attempts.list();
+        state.attempts = {};
+        attempts.forEach(function (attempt) {
+          var current = state.attempts[attempt.assignmentId];
+          if (!current || new Date(attempt.startedAt || 0) > new Date(current.startedAt || 0)) {
+            state.attempts[attempt.assignmentId] = attempt;
+          }
+        });
+      } catch (error) {
+        state.attempts = {};
       }
     }
 

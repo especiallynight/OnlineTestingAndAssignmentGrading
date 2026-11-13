@@ -24,6 +24,11 @@
     return Math.round((Number(score) / max) * 100);
   }
 
+  // Оценку можно выставлять только по завершённой попытке.
+  function isAttemptFinished(attempt) {
+    return attempt.status === 'completed' || attempt.status === 'expired';
+  }
+
   // Приводит ответ студента к читаемому виду.
   function formatAnswer(answer) {
     if (!answer) {
@@ -181,6 +186,11 @@
         'Проверено: ' + App.formatDate(grade.checkedAt) + '.' +
         (grade.feedback ? '<br>Комментарий: ' + App.escapeHtml(grade.feedback) : '') +
         '</div>';
+    } else if (!isAttemptFinished(attempt)) {
+      gradeHtml =
+        '<div class="notice">' +
+        'Попытка ещё не завершена. Оценку можно выставить только после завершения теста.' +
+        '</div>';
     } else {
       gradeHtml =
         '<div class="form-field">' +
@@ -234,12 +244,14 @@
       }
     }
 
+    var canGrade = isAttemptFinished(attempt) && !grade;
+
     App.openModal({
       title: 'Работа студента',
-      submitLabel: grade ? 'Закрыть' : 'Выставить оценку',
+      submitLabel: canGrade ? 'Выставить оценку' : 'Закрыть',
       body: buildReviewBody(attempt, assignment, questions, answers, grade),
       onSubmit: async function (form) {
-        if (grade) {
+        if (!canGrade) {
           return;
         }
         var values = App.formValues(form);
