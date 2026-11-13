@@ -14,8 +14,8 @@
       <div class="page-head">
         <div>
           <h1>Конструктор теста</h1>
-          <p class="page-subtitle">Настройки теста и вопросы четырёх типов.</p>
-          <span class="service-note">Сервис: ExamService</span>
+          <p class="page-subtitle">Параметры теста и вопросы: задания хранятся в CourseService.</p>
+          <span class="service-note">Сервис: CourseService</span>
         </div>
         <div id="editor-actions"></div>
       </div>
@@ -40,18 +40,15 @@
           </div>
           <div class="form-field">
             <label for="test-duration-input">Длительность, минут</label>
-            <input id="test-duration-input" type="number" name="durationMin" min="5" max="180">
+            <input id="test-duration-input" type="number" name="durationMin" min="1" max="1440" required>
           </div>
           <div class="form-field">
-            <label for="test-status-input">Статус</label>
-            <select id="test-status-input" name="status">
-              <option value="draft">Черновик</option>
-              <option value="published">Опубликован</option>
-            </select>
+            <label for="test-max-score-input">Максимум баллов</label>
+            <input id="test-max-score-input" type="number" name="maxScore" min="1" max="1000" required>
           </div>
           <div class="form-field form-field-full">
             <label for="test-description-input">Описание</label>
-            <textarea id="test-description-input" name="description"></textarea>
+            <textarea id="test-description-input" name="description" maxlength="170" rows="3"></textarea>
           </div>
         </div>
         <div class="form-actions">
@@ -71,8 +68,6 @@
   </main>
 
   <footer id="app-footer" class="app-footer"></footer>
-
-  <script src="../js/data.js"></script>
   <script src="../js/layout.js"></script>
   <script src="../js/app.js"></script>
   <script src="../js/pages/test-editor.js"></script>

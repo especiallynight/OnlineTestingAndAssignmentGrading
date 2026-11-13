@@ -70,7 +70,7 @@ namespace IdentityService.Controllers
         }
 
         [HttpPost]
-        [AllowAnonymous]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<UserResponseDTO>> CreateUser(CreateUserDTO dto)
         {
             var emailExists = await _context.Users.AnyAsync(u => u.Email == dto.Email);
@@ -82,7 +82,7 @@ namespace IdentityService.Controllers
                 FirstName = dto.FirstName,
                 LastName = dto.LastName,
                 Email = dto.Email,
-                Role = UserRole.Student,
+                Role = dto.Role ?? UserRole.Student,
             };
 
             user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
@@ -137,6 +137,53 @@ namespace IdentityService.Controllers
                 Email = user.Email,
                 Role = user.Role
             });
+        }
+
+        [HttpPut("{user_id:int}/role")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<UserResponseDTO>> UpdateUserRole(int user_id, UpdateUserRoleDTO dto)
+        {
+            var currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(currentUserId, out var id))
+                return Unauthorized();
+
+            if (id == user_id)
+                return BadRequest("Нельзя изменить собственную роль");
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserId == user_id);
+            if (user == null)
+                return NotFound();
+
+            user.Role = dto.Role;
+            await _context.SaveChangesAsync();
+
+            return Ok(new UserResponseDTO
+            {
+                UserId = user.UserId,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email,
+                Role = user.Role
+            });
+        }
+
+        // Справочник пользователей для преподавателей: нужен для отображения имён студентов.
+        [HttpGet("lookup")]
+        [Authorize]
+        public async Task<ActionResult<List<UserResponseDTO>>> LookupUsers()
+        {
+            var users = await _context.Users
+                .Select(user => new UserResponseDTO
+                {
+                    UserId = user.UserId,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    Role = user.Role
+                })
+                .ToListAsync();
+
+            return Ok(users);
         }
 
         [HttpDelete("me")]

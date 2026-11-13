@@ -1,196 +1,253 @@
 /*
  * home.js — дашборд. Содержимое зависит от роли пользователя.
- * Данные берутся из window.Mock, отрисовка — через хелперы App.
+ * Данные загружаются из микросервисов через ApiGateway.
  */
 (function () {
   'use strict';
 
   var App = window.App;
 
-  // Возвращает среднюю оценку по проверенным попыткам.
-  function averageGrade(attempts) {
-    var graded = attempts.filter(function (attempt) {
-      return attempt.grade !== null && attempt.grade !== undefined;
-    });
-    if (!graded.length) {
-      return '—';
+  var state = {
+    role: null,
+    user: null,
+    users: [],
+    courses: [],
+    assignments: [],
+    attempts: [],
+    grades: {}
+  };
+
+  function percent(score, maxScore) {
+    var max = Number(maxScore);
+    if (!max) {
+      return null;
     }
-    var sum = graded.reduce(function (total, attempt) {
-      return total + attempt.grade;
-    }, 0);
-    return (sum / graded.length).toFixed(1);
+    return Math.round((Number(score) / max) * 100);
   }
 
-  // Формирует заголовок и подпись дашборда для текущего пользователя.
-  function renderHeading(user, role) {
+  function averagePercent(gradedAttempts) {
+    var values = gradedAttempts.map(function (attempt) {
+      var grade = state.grades[attempt.id];
+      return grade ? percent(grade.score, grade.maxScore) : null;
+    }).filter(function (value) {
+      return value !== null;
+    });
+    if (!values.length) {
+      return '—';
+    }
+    return Math.round(values.reduce(function (sum, value) {
+      return sum + value;
+    }, 0) / values.length) + '%';
+  }
+
+  function myAssignments() {
+    var courseIds = {};
+    state.courses.forEach(function (course) {
+      courseIds[String(course.id)] = true;
+    });
+    return state.assignments.filter(function (assignment) {
+      return courseIds[String(assignment.courseId)];
+    });
+  }
+
+  function relevantAttempts() {
+    if (state.role !== 'teacher') {
+      return state.attempts;
+    }
+    var assignmentIds = {};
+    myAssignments().forEach(function (assignment) {
+      assignmentIds[String(assignment.id)] = true;
+    });
+    return state.attempts.filter(function (attempt) {
+      return assignmentIds[String(attempt.assignmentId)];
+    });
+  }
+
+  async function loadGrades(attempts) {
+    state.grades = {};
+    await Promise.all(attempts.map(async function (attempt) {
+      try {
+        state.grades[attempt.id] = await App.api.grades.byAttempt(attempt.id);
+      } catch (error) {
+        state.grades[attempt.id] = null;
+      }
+    }));
+  }
+
+  function renderHeading() {
     var subtitle = document.getElementById('dashboard-subtitle');
     var actions = document.getElementById('dashboard-actions');
     if (!subtitle || !actions) {
       return;
     }
 
-    subtitle.textContent = 'Здравствуйте, ' + user.fullName + '. ' +
-      'Это учебный макет системы онлайн-тестирования.';
+    subtitle.textContent = 'Здравствуйте, ' + state.user.fullName +
+      '. Сводка по вашей роли в системе онлайн-тестирования.';
 
-    if (role === 'student') {
-      actions.innerHTML = '<a class="btn btn-primary" href="' + App.url('courses.html') + '">Перейти к курсам</a>';
-    } else if (role === 'teacher') {
-      actions.innerHTML = '<a class="btn btn-primary" href="' + App.url('test-editor.html') + '">Создать тест</a>';
+    if (state.role === 'student') {
+      actions.innerHTML = '<a class="btn btn-primary" href="' +
+        App.url('courses.html') + '">Перейти к курсам</a>';
+    } else if (state.role === 'teacher') {
+      actions.innerHTML = '<a class="btn btn-primary" href="' +
+        App.url('test-editor.html') + '">Создать тест</a>';
     } else {
-      actions.innerHTML = '<a class="btn btn-primary" href="' + App.url('admin-users.html') + '">Управление пользователями</a>';
+      actions.innerHTML = '<a class="btn btn-primary" href="' +
+        App.url('admin-users.html') + '">Управление пользователями</a>';
     }
   }
 
-  // Рисует дашборд студента.
-  function renderStudentDashboard(user) {
-    var myAttempts = window.Mock.attempts.filter(function (attempt) {
-      return attempt.studentId === user.id;
-    });
-    var mySubmissions = window.Mock.submissions.filter(function (submission) {
-      return submission.studentId === user.id;
-    });
-    var publishedTests = window.Mock.tests.filter(function (test) {
-      return test.status === 'published';
+  function renderStudent() {
+    var assignments = myAssignments();
+    var graded = state.attempts.filter(function (attempt) {
+      return !!state.grades[attempt.id];
     });
 
     App.renderCards('dashboard-stats', [
-      { title: 'Доступные тесты', value: publishedTests.length, subtitle: 'Опубликованные тесты курсов' },
-      { title: 'Мои попытки', value: myAttempts.length, subtitle: 'Всего прохождений' },
-      { title: 'Средняя оценка', value: averageGrade(myAttempts), subtitle: 'По проверенным работам' },
-      { title: 'Посылки кода', value: mySubmissions.length, subtitle: 'Отправленные решения' }
+      { title: 'Мои курсы', value: state.courses.length, subtitle: 'Активные записи' },
+      { title: 'Доступные тесты', value: assignments.length, subtitle: 'В ваших курсах' },
+      { title: 'Мои попытки', value: state.attempts.length, subtitle: 'Все прохождения' },
+      { title: 'Средний результат', value: averagePercent(graded), subtitle: 'По проверенным работам' }
     ]);
 
-    var mainTitle = document.getElementById('dashboard-main-title');
-    var mainNote = document.getElementById('dashboard-main-note');
-    mainTitle.textContent = 'Доступные тесты';
-    mainNote.textContent = 'Нажмите «Начать», чтобы открыть макет прохождения теста';
+    document.getElementById('dashboard-main-title').textContent = 'Мои курсы';
+    document.getElementById('dashboard-main-note').textContent =
+      'Откройте курс, чтобы пройти тесты';
 
     App.renderTable('dashboard-main-table', [
       {
-        label: 'Тест',
-        render: function (test) {
-          return '<span class="table-title">' + App.escapeHtml(test.title) + '</span>';
-        }
-      },
-      {
         label: 'Курс',
-        render: function (test) {
-          var course = App.getCourseById(test.courseId);
-          return App.escapeHtml(course ? course.title : '—');
+        render: function (course) {
+          return '<span class="table-title">' + App.escapeHtml(course.title) + '</span>';
         }
       },
       {
-        label: 'Длительность',
-        render: function (test) {
-          return App.escapeHtml(test.durationMin) + ' мин';
+        label: 'Преподаватель',
+        render: function (course) {
+          var teacher = App.getUserById(course.teacherId);
+          return App.escapeHtml(teacher ? teacher.fullName : '#' + course.teacherId);
         }
       },
       {
-        label: 'Вопросов',
-        key: 'questionsCount'
+        label: 'Тестов',
+        render: function (course) {
+          var count = assignments.filter(function (assignment) {
+            return String(assignment.courseId) === String(course.id);
+          }).length;
+          return String(count);
+        }
+      },
+      {
+        label: 'Студентов',
+        key: 'studentsCount'
       },
       {
         label: 'Действие',
-        render: function (test) {
+        render: function (course) {
           return '<a class="btn btn-sm btn-soft" href="' +
-            App.url('test-taking.html') + '?id=' + test.id + '">Начать</a>';
+            App.url('course-details.html') + '?id=' + course.id + '">Открыть</a>';
         }
       }
-    ], publishedTests);
+    ], state.courses);
 
-    var secondaryTitle = document.getElementById('dashboard-secondary-title');
-    secondaryTitle.textContent = 'Последние результаты';
+    document.getElementById('dashboard-secondary-title').textContent = 'Последние результаты';
 
-    var attempts = myAttempts.slice().sort(function (first, second) {
-      return new Date(second.startedAt) - new Date(first.startedAt);
-    });
+    var recent = state.attempts.slice().sort(function (first, second) {
+      return new Date(second.startedAt || 0) - new Date(first.startedAt || 0);
+    }).slice(0, 6);
 
-    App.renderCards('dashboard-secondary', attempts.map(function (attempt) {
-      var test = App.getTestById(attempt.testId);
+    App.renderCards('dashboard-secondary', recent.map(function (attempt) {
+      var assignment = App.getAssignmentById(attempt.assignmentId);
+      var grade = state.grades[attempt.id];
       return {
-        title: test ? test.title : 'Тест',
-        subtitle: App.formatDate(attempt.finishedAt || attempt.startedAt),
-        meta: ['Баллы: ' + attempt.score + ' из ' + attempt.maxScore],
-        badge: attempt.grade ? 'grade-' + attempt.grade : attempt.status,
+        title: assignment ? assignment.title : 'Задание #' + attempt.assignmentId,
+        subtitle: App.formatDate(attempt.startedAt),
+        meta: [
+          grade ? 'Баллы: ' + grade.score + ' из ' + grade.maxScore
+            : 'Оценка ещё не выставлена',
+          'Статус: ' + App.statusLabel(attempt.status)
+        ],
+        badge: grade ? 'checked' : attempt.status,
         href: App.url('my-results.html'),
         hrefLabel: 'Все результаты'
       };
     }));
   }
 
-  // Рисует дашборд преподавателя.
-  function renderTeacherDashboard(user) {
-    var myCourses = window.Mock.courses.filter(function (course) {
-      return course.teacherId === user.id;
+  function renderTeacher() {
+    var assignments = myAssignments();
+    var attempts = relevantAttempts().slice().sort(function (first, second) {
+      return new Date(second.startedAt || 0) - new Date(first.startedAt || 0);
     });
-    var myCoursesIds = myCourses.map(function (course) {
-      return course.id;
+    var pending = attempts.filter(function (attempt) {
+      return !state.grades[attempt.id];
     });
-    var myTests = window.Mock.tests.filter(function (test) {
-      return myCoursesIds.indexOf(test.courseId) !== -1;
+    var students = state.users.filter(function (user) {
+      return user.role === 'student';
     });
-    var pendingAttempts = window.Mock.attempts.filter(function (attempt) {
-      return attempt.status === 'pending';
-    });
-    var studentsCount = window.Mock.users.filter(function (item) {
-      return item.role === 'student';
-    }).length;
 
     App.renderCards('dashboard-stats', [
-      { title: 'Мои курсы', value: myCourses.length, subtitle: 'Курсы, где вы преподаватель' },
-      { title: 'Мои тесты', value: myTests.length, subtitle: 'Включая черновики' },
-      { title: 'На проверке', value: pendingAttempts.length, subtitle: 'Работы ожидают оценки' },
-      { title: 'Студентов', value: studentsCount, subtitle: 'В системе' }
+      { title: 'Мои курсы', value: state.courses.length, subtitle: 'Курсы, где вы преподаватель' },
+      { title: 'Мои тесты', value: assignments.length, subtitle: 'Задания в ваших курсах' },
+      { title: 'Попытки студентов', value: attempts.length, subtitle: 'По вашим тестам' },
+      { title: 'Без оценки', value: pending.length, subtitle: 'Ожидают проверки' }
     ]);
 
-    document.getElementById('dashboard-main-title').textContent = 'Работы на проверке';
-    document.getElementById('dashboard-main-note').textContent = 'Развёрнутые ответы ожидают решения преподавателя';
+    document.getElementById('dashboard-main-title').textContent = 'Последние работы';
+    document.getElementById('dashboard-main-note').textContent =
+      'Студентов в системе: ' + students.length;
 
     App.renderTable('dashboard-main-table', [
       {
         label: 'Студент',
         render: function (attempt) {
           var student = App.getUserById(attempt.studentId);
-          return App.escapeHtml(student ? student.fullName : '—');
+          return App.escapeHtml(student ? student.fullName : '#' + attempt.studentId);
         }
       },
       {
         label: 'Тест',
         render: function (attempt) {
-          var test = App.getTestById(attempt.testId);
-          return App.escapeHtml(test ? test.title : '—');
+          var assignment = App.getAssignmentById(attempt.assignmentId);
+          return App.escapeHtml(assignment ? assignment.title : '#' + attempt.assignmentId);
         }
       },
       {
-        label: 'Отправлено',
+        label: 'Начата',
         render: function (attempt) {
-          return App.formatDate(attempt.finishedAt);
+          return App.formatDate(attempt.startedAt);
         }
       },
       {
-        label: 'Статус',
+        label: 'Результат',
         render: function (attempt) {
-          return App.renderBadge(attempt.status);
+          var grade = state.grades[attempt.id];
+          if (!grade) {
+            return App.renderBadge('pending');
+          }
+          return App.escapeHtml(grade.score + ' / ' + grade.maxScore);
         }
       },
       {
         label: 'Действие',
         render: function () {
-          return '<a class="btn btn-sm btn-soft" href="' + App.url('grading.html') + '">Оценить</a>';
+          return '<a class="btn btn-sm btn-soft" href="' +
+            App.url('grading.html') + '">Проверить</a>';
         }
       }
-    ], pendingAttempts);
+    ], attempts.slice(0, 8));
 
     document.getElementById('dashboard-secondary-title').textContent = 'Мои курсы';
 
-    App.renderCards('dashboard-secondary', myCourses.map(function (course) {
+    App.renderCards('dashboard-secondary', state.courses.map(function (course) {
+      var count = assignments.filter(function (assignment) {
+        return String(assignment.courseId) === String(course.id);
+      }).length;
       return {
         title: course.title,
-        subtitle: App.statusLabel(course.status),
+        subtitle: 'Тестов: ' + count,
         meta: [
-          'Модулей: ' + course.modulesCount,
-          'Тестов: ' + course.testsCount,
-          'Студентов: ' + course.studentsCount
+          'Студентов: ' + course.studentsCount,
+          'Создан: ' + App.formatDateOnly(course.createdAt)
         ],
         href: App.url('course-details.html') + '?id=' + course.id,
         hrefLabel: 'Открыть курс'
@@ -198,28 +255,24 @@
     }));
   }
 
-  // Рисует дашборд администратора.
-  function renderAdminDashboard() {
-    var users = window.Mock.users;
-    var students = users.filter(function (user) {
+  function renderAdmin() {
+    var students = state.users.filter(function (user) {
       return user.role === 'student';
     });
-    var teachers = users.filter(function (user) {
+    var teachers = state.users.filter(function (user) {
       return user.role === 'teacher';
-    });
-    var admins = users.filter(function (user) {
-      return user.role === 'admin';
     });
 
     App.renderCards('dashboard-stats', [
-      { title: 'Пользователей', value: users.length, subtitle: 'Все учётные записи' },
-      { title: 'Студентов', value: students.length, subtitle: 'Активные студенты' },
-      { title: 'Преподавателей', value: teachers.length, subtitle: 'Ведут курсы' },
-      { title: 'Администраторов', value: admins.length, subtitle: 'Управление системой' }
+      { title: 'Пользователей', value: state.users.length, subtitle: 'Все учётные записи' },
+      { title: 'Студентов', value: students.length, subtitle: 'Роль «Студент»' },
+      { title: 'Преподавателей', value: teachers.length, subtitle: 'Роль «Преподаватель»' },
+      { title: 'Курсов', value: state.courses.length, subtitle: 'В каталоге' }
     ]);
 
     document.getElementById('dashboard-main-title').textContent = 'Пользователи системы';
-    document.getElementById('dashboard-main-note').textContent = 'Полный список доступен в разделе «Пользователи»';
+    document.getElementById('dashboard-main-note').textContent =
+      'Полный список доступен в разделе «Пользователи»';
 
     App.renderTable('dashboard-main-table', [
       { label: 'ФИО', key: 'fullName' },
@@ -230,25 +283,25 @@
           return App.renderBadge(user.role);
         }
       },
-      { label: 'Группа / кафедра', key: 'group' },
       {
         label: 'Действие',
         render: function () {
-          return '<a class="btn btn-sm btn-soft" href="' + App.url('admin-users.html') + '">Открыть</a>';
+          return '<a class="btn btn-sm btn-soft" href="' +
+            App.url('admin-users.html') + '">Открыть</a>';
         }
       }
-    ], users);
+    ], state.users.slice(0, 10));
 
-    document.getElementById('dashboard-secondary-title').textContent = 'Аналитика по курсам';
+    document.getElementById('dashboard-secondary-title').textContent = 'Курсы платформы';
 
-    App.renderCards('dashboard-secondary', window.Mock.analytics.courses.slice(0, 4).map(function (stat) {
-      var course = App.getCourseById(stat.courseId);
+    App.renderCards('dashboard-secondary', state.courses.slice(0, 6).map(function (course) {
+      var teacher = App.getUserById(course.teacherId);
       return {
-        title: course ? course.title : 'Курс',
-        subtitle: 'Средний балл: ' + stat.averageScore + ' из 5',
+        title: course.title,
+        subtitle: teacher ? teacher.fullName : 'Преподаватель #' + course.teacherId,
         meta: [
-          'Сдача: ' + stat.passRate + '%',
-          'Попыток: ' + stat.attempts
+          'Тестов: ' + course.assignmentsCount,
+          'Студентов: ' + course.studentsCount
         ],
         href: App.url('analytics.html'),
         hrefLabel: 'Смотреть аналитику'
@@ -256,28 +309,69 @@
     }));
   }
 
-  // Точка входа дашборда.
+  async function load() {
+    state.role = App.getRole();
+    state.user = App.getUser();
+
+    try {
+      state.users = await App.api.users.lookup();
+    } catch (error) {
+      state.users = [];
+    }
+
+    if (state.role === 'student') {
+      state.courses = await App.api.courses.enrolled();
+    } else {
+      var courses = await App.api.courses.list();
+      state.courses = state.role === 'teacher'
+        ? courses.filter(function (course) { return course.teacherId === state.user.id; })
+        : courses;
+    }
+
+    var lists = await Promise.all(state.courses.map(function (course) {
+      return App.api.assignments.list(course.id).catch(function () { return []; });
+    }));
+    state.assignments = [];
+    lists.forEach(function (list) {
+      state.assignments = state.assignments.concat(list);
+    });
+    App.cacheAssignments(state.assignments);
+
+    state.attempts = await App.api.attempts.list();
+    if (state.role === 'student') {
+      state.attempts = state.attempts.filter(function (attempt) {
+        return String(attempt.studentId) === String(state.user.id);
+      });
+    } else if (state.role === 'teacher') {
+      state.attempts = relevantAttempts();
+    }
+
+    await loadGrades(state.attempts);
+
+    renderHeading();
+    if (state.role === 'student') {
+      renderStudent();
+    } else if (state.role === 'teacher') {
+      renderTeacher();
+    } else {
+      renderAdmin();
+    }
+  }
+
   function init() {
     if (!App.requireRole(['student', 'teacher', 'admin'])) {
       return;
     }
 
-    var role = App.getRole();
     var user = App.getUser();
     if (!user) {
       location.href = App.url('login.html');
       return;
     }
 
-    renderHeading(user, role);
-
-    if (role === 'student') {
-      renderStudentDashboard(user);
-    } else if (role === 'teacher') {
-      renderTeacherDashboard(user);
-    } else {
-      renderAdminDashboard();
-    }
+    load().catch(function (error) {
+      App.showError('dashboard-main-table', error);
+    });
   }
 
   init();

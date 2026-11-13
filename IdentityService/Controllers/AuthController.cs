@@ -36,7 +36,7 @@ namespace IdentityService.Controllers
 
         [HttpPost("register")]
         [AllowAnonymous]
-        public async Task<ActionResult> Register(LoginDTO dto)
+        public async Task<ActionResult> Register(CreateUserDTO dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Email) ||
                 string.IsNullOrWhiteSpace(dto.Password))
@@ -44,19 +44,25 @@ namespace IdentityService.Controllers
                 return BadRequest("Email и пароль обязательны");
             }
 
-            var existing_user = await _context.Users
-                .AnyAsync(user => user.Email == dto.Email);
+            var existingUser = await _context.Users
+                .AnyAsync(u => u.Email == dto.Email);
 
-            if (existing_user)
+            if (existingUser)
+            {
                 return Conflict("Пользователь с таким email уже существует");
+            }
 
             var user = new User
             {
                 Email = dto.Email,
-                Role = IdentityService.Enums.UserRole.Student
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                Role = UserRole.Student
             };
 
-            user.PasswordHash = _passwordHasher.HashPassword(user, dto.Password);
+            user.PasswordHash = _passwordHasher.HashPassword(
+                user,
+                dto.Password);
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();

@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+using IdentityService.Enums;
 
 namespace IdentityService.DTOs
 {
@@ -21,5 +23,8 @@ namespace IdentityService.DTOs
         [Required(ErrorMessage = "Фамилия обязательна")]
         [StringLength(50, MinimumLength = 2, ErrorMessage = "Фамилия от 2 до 50 символов")]
         public string LastName { get; set; } = string.Empty;
+
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public UserRole? Role { get; set; }
     }
 }

@@ -16,5 +16,9 @@ namespace CourseService.DTOs
 
         [Required(ErrorMessage = "Параметры вопроса обязательны")]
         public JsonElement? Options { get; set; }
+
+        public JsonElement? CorrectAnswer { get; set; }
+
+        public JsonElement? TestCases { get; set; }
     }
 }

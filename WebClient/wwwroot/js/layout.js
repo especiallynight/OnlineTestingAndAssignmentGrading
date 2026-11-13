@@ -48,7 +48,7 @@
   // Строит блок текущего пользователя с именем, ролью и кнопкой выхода.
   function buildUserBox(user, role) {
     if (!user || !role) {
-      return '<div class="user-box"><span class="muted small">Демо-режим</span></div>';
+      return '<div class="user-box"><span class="muted small">Гость</span></div>';
     }
     return '<div class="user-box">' +
       '<div class="user-info">' +
@@ -85,14 +85,15 @@
 
     var logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
-      logoutBtn.addEventListener('click', function () {
-        window.App.clearSession();
+      logoutBtn.addEventListener('click', async function () {
+        logoutBtn.disabled = true;
+        await window.App.api.auth.logout();
         location.href = window.App.url('login.html');
       });
     }
   }
 
-  // Рендерит подвал с пометкой об учебном макете.
+  // Рендерит подвал.
   function renderFooter() {
     var footer = document.getElementById('app-footer');
     if (!footer) {
@@ -101,7 +102,7 @@
     footer.innerHTML =
       '<div class="container footer-inner">' +
       '<span>© ' + new Date().getFullYear() + ' OnlineTesting — учебный проект</span>' +
-      '<span>Данные: мок · Backend будет подключён позже</span>' +
+      '<span>Данные: микросервисы через ApiGateway</span>' +
       '</div>';
   }
 

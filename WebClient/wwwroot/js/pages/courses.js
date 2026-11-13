@@ -1,11 +1,13 @@
 /*
- * courses.js — каталог курсов.
- * Данные берутся из Mock.courses, фильтры меняют только отображение.
+ * courses.js — каталог курсов из CourseService.
+ * Фильтры работают по данным, полученным через ApiGateway.
  */
 (function () {
   'use strict';
 
   var App = window.App;
+  var allCourses = [];
+  var allUsers = [];
 
   // Заполняет фильтр преподавателей.
   function fillTeacherFilter() {
@@ -14,7 +16,7 @@
       return;
     }
 
-    var teachers = window.Mock.users.filter(function (user) {
+    var teachers = allUsers.filter(function (user) {
       return user.role === 'teacher';
     });
 
@@ -27,15 +29,17 @@
 
   // Возвращает курсы с учётом выбранных фильтров.
   function getFilteredCourses() {
-    var statusSelect = document.getElementById('course-status-filter');
+    var search = document.getElementById('course-search');
     var teacherSelect = document.getElementById('course-teacher-filter');
-    var status = statusSelect ? statusSelect.value : 'all';
+    var query = search ? search.value.trim().toLowerCase() : '';
     var teacherId = teacherSelect ? teacherSelect.value : 'all';
 
-    return window.Mock.courses.filter(function (course) {
-      var statusMatches = status === 'all' || course.status === status;
-      var teacherMatches = teacherId === 'all' || course.teacherId === teacherId;
-      return statusMatches && teacherMatches;
+    return allCourses.filter(function (course) {
+      var queryMatches = !query ||
+        course.title.toLowerCase().indexOf(query) !== -1 ||
+        course.description.toLowerCase().indexOf(query) !== -1;
+      var teacherMatches = teacherId === 'all' || String(course.teacherId) === teacherId;
+      return queryMatches && teacherMatches;
     });
   }
 
@@ -51,19 +55,44 @@
       var teacher = App.getUserById(course.teacherId);
       return {
         title: course.title,
-        subtitle: teacher ? teacher.fullName : 'Преподаватель не назначен',
-        text: course.description,
-        badge: course.status,
+        subtitle: teacher ? teacher.fullName : 'Преподаватель #' + course.teacherId,
+        text: course.description || 'Описание не заполнено.',
+        badge: 'active',
         meta: [
-          'Модулей: ' + course.modulesCount,
-          'Тестов: ' + course.testsCount,
+          'Тестов: ' + course.assignmentsCount,
           'Студентов: ' + course.studentsCount,
-          'Недель: ' + course.durationWeeks
+          'Создан: ' + App.formatDateOnly(course.createdAt)
         ],
         href: App.url('course-details.html') + '?id=' + course.id,
         hrefLabel: 'Открыть курс'
       };
     }));
+  }
+
+  // Открывает форму создания курса.
+  function openCreateCourse() {
+    App.openModal({
+      title: 'Новый курс',
+      submitLabel: 'Создать курс',
+      body:
+        '<div class="form-field">' +
+        '<label for="new-course-name">Название</label>' +
+        '<input id="new-course-name" name="name" type="text" minlength="3" maxlength="100" required>' +
+        '</div>' +
+        '<div class="form-field">' +
+        '<label for="new-course-description">Описание</label>' +
+        '<textarea id="new-course-description" name="description" maxlength="150" rows="4"></textarea>' +
+        '</div>',
+      onSubmit: async function (form) {
+        var values = App.formValues(form);
+        await App.api.courses.create({
+          name: values.name.trim(),
+          description: values.description.trim()
+        });
+        App.notify('Курс создан', 'success');
+        await loadCourses();
+      }
+    });
   }
 
   // Добавляет кнопку создания курса для преподавателя.
@@ -73,29 +102,46 @@
       return;
     }
     actions.innerHTML = '<button class="btn btn-primary" type="button" id="create-course-btn">Создать курс</button>';
-    document.getElementById('create-course-btn').addEventListener('click', function () {
-      App.stub('Создать курс');
-    });
+    document.getElementById('create-course-btn').addEventListener('click', openCreateCourse);
   }
 
   // Сбрасывает фильтры к исходным значениям.
   function resetFilters() {
-    document.getElementById('course-status-filter').value = 'all';
+    document.getElementById('course-search').value = '';
     document.getElementById('course-teacher-filter').value = 'all';
     renderCourses();
   }
 
+  async function loadCourses() {
+    try {
+      allCourses = await App.api.courses.list();
+      renderCourses();
+    } catch (error) {
+      App.showError('courses-grid', error);
+    }
+  }
+
   // Инициализирует страницу каталога.
-  function init() {
+  async function init() {
     if (!App.requireRole(['student', 'teacher'])) {
       return;
     }
 
+    try {
+      var users = await App.api.users.lookup();
+      allUsers = users;
+    } catch (error) {
+      allUsers = [];
+    }
+
     fillTeacherFilter();
     renderActions(App.getRole());
-    renderCourses();
+    await loadCourses();
 
-    document.getElementById('course-status-filter').addEventListener('change', renderCourses);
+    var search = document.getElementById('course-search');
+    if (search) {
+      search.addEventListener('input', App.debounce(renderCourses, 200));
+    }
     document.getElementById('course-teacher-filter').addEventListener('change', renderCourses);
     document.getElementById('courses-reset').addEventListener('click', resetFilters);
   }

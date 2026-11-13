@@ -14,7 +14,7 @@
       <div class="page-head">
         <div>
           <h1>Посылки кода</h1>
-          <p class="page-subtitle">Решения задач и вердикты системы выполнения кода.</p>
+          <p class="page-subtitle">Решения задач на программирование и вердикты автопроверки.</p>
           <span class="service-note">Сервис: CodeExecutionService</span>
         </div>
         <div id="submissions-actions"></div>
@@ -26,11 +26,12 @@
         <div class="form-field">
           <label for="verdict-filter">Вердикт</label>
           <select id="verdict-filter">
-            <option value="all">Все вердикты</option>
+            <option value="all">Все решения</option>
             <option value="OK">OK — принято</option>
             <option value="WA">WA — неверный ответ</option>
             <option value="TLE">TLE — превышено время</option>
             <option value="CE">CE — ошибка компиляции</option>
+            <option value="not-submitted">Не отправлено на проверку</option>
           </select>
         </div>
       </div>
@@ -38,14 +39,15 @@
       <div id="submissions-table"></div>
 
       <div class="notice">
-        Кнопка «Проверить код» — заглушка. Реальная отправка решения в песочницу появится после подключения CodeExecutionService.
+        Код проверяется CodeExecutionService после нажатия «Проверить код»
+        на странице прохождения теста. Итоговый балл за задачу учитывается
+        при выставлении оценки за попытку.
       </div>
     </div>
   </main>
 
   <footer id="app-footer" class="app-footer"></footer>
 
-  <script src="../js/data.js"></script>
   <script src="../js/layout.js"></script>
   <script src="../js/app.js"></script>
   <script src="../js/pages/code-submissions.js"></script>

@@ -1,12 +1,17 @@
-﻿using AnalyticsService.Controllers;
+﻿using AnalyticsService.Consumers;
+using AnalyticsService.Controllers;
 using AnalyticsService.Data;
 using AnalyticsService.DTOs;
+using AnalyticsService.Hubs;
 using AnalyticsService.Models;
+using MassTransit;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using Moq;
+using Shared.Events;
 using System.Security.Claims;
 
 namespace AnalyticsService.Tests;
@@ -24,10 +29,10 @@ public class AnalyticsControllerTests
     private AnalyticsController GetController(AnalyticsDbContext db, string userId = "1", string role = "Student")
     {
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[]
-        {
-            new Claim("sub", userId),
-            new Claim("role", role)
-        }));
+{
+            new Claim(ClaimTypes.NameIdentifier, userId),
+            new Claim(ClaimTypes.Role, role)
+        }, "TestAuth"));
         return new AnalyticsController(db, new Mock<IDistributedCache>().Object)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } }
@@ -76,34 +81,55 @@ public class AnalyticsControllerTests
         Assert.Equal(100, updated.HighestScore);
     }
 
-    //Защита от повторной доставки RabbitMQ.
-    //Ожидает: повторная попытка не изменяет статистику: CompletedAttempts = 1, AverageScore = 80, количество обработанных попыток = 1.
+    // Проверяет, что повторная доставка события не создаёт дубль статистики
     [Fact]
-    public void UpdateStatistics_IgnoresDuplicateAttemptId()
+    public async Task Consume_DuplicateEvent()
     {
-        var stats = new StudentStatistics
+        var options = new DbContextOptionsBuilder<AnalyticsDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options;
+        using var db = new AnalyticsDbContext(options);
+
+        var clientProxy = new Mock<IClientProxy>();
+        var hubClients = new Mock<IHubClients>();
+
+        hubClients
+            .Setup(c => c.All)
+            .Returns(clientProxy.Object);
+
+        var hub = new Mock<IHubContext<GradingHub>>();
+        hub.Setup(h => h.Clients).Returns(hubClients.Object);
+
+        clientProxy
+            .Setup(p => p.SendCoreAsync(
+                It.IsAny<string>(),
+                It.IsAny<object[]>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var cacheMock = new Mock<IDistributedCache>();
+        var consumer = new AttemptGradedConsumer(db, hub.Object, cacheMock.Object);
+
+        var evt = new AttemptGradedEvent
         {
+            AttemptId = 1,
             StudentId = 1,
             CourseId = 1,
-            CompletedAttempts = 1,
-            AverageScore = 80,
-            HighestScore = 80,
-            ProcessedAttemptIds = new List<int> { 100 } 
+            Score = 80,
+            MaxScore = 100,
+            GradedAt = DateTimeOffset.UtcNow
         };
 
-        int newAttemptId = 100; 
-        decimal newScorePercent = 90;
+        var ctx = new Mock<ConsumeContext<AttemptGradedEvent>>();
+        ctx.Setup(c => c.Message).Returns(evt);
 
-        if (!stats.ProcessedAttemptIds.Contains(newAttemptId))
-        {
-            stats.AverageScore = (stats.AverageScore * stats.CompletedAttempts + newScorePercent) / (stats.CompletedAttempts + 1);
-            stats.CompletedAttempts++;
-            stats.ProcessedAttemptIds.Add(newAttemptId);
-        }
+        // Отправляем событие дважды
+        await consumer.Consume(ctx.Object);
+        await consumer.Consume(ctx.Object);
 
-        Assert.Equal(1, stats.CompletedAttempts); 
-        Assert.Equal(80, stats.AverageScore);     
-        Assert.Single(stats.ProcessedAttemptIds); 
+        // Проверяем, что статистика посчитана только один раз
+        var stats = await db.StudentStatistics.SingleAsync();
+        Assert.Equal(1, stats.CompletedAttempts);
+        Assert.Equal(80, stats.AverageScore);
     }
 
 }

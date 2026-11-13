@@ -14,7 +14,7 @@
             <div class="page-head">
                 <div>
                     <h1>Вход в систему</h1>
-                    <p class="page-subtitle">Выберите демо-учётную запись, чтобы посмотреть макет под нужной ролью.</p>
+                    <p class="page-subtitle">Введите учётные данные или выберите демо-аккаунт справа.</p>
                     <span class="service-note">Сервис: IdentityService</span>
                 </div>
             </div>
@@ -22,36 +22,36 @@
             <div class="login-layout">
                 <section class="login-card">
                     <h2>Авторизация</h2>
-                    <p class="muted small">Пароль в макете не проверяется — это заглушка будущего JWT-входа.</p>
+                    <p class="muted small">Пароль проверяется IdentityService, после входа сохраняется JWT-токен.</p>
 
                     <form id="login-form" class="form-stack">
                         <div class="form-field">
-                            <label for="login-user">Пользователь</label>
-                            <select id="login-user" name="userId"></select>
+                            <label for="login-email">Электронная почта</label>
+                            <input id="login-email" type="email" name="email" placeholder="student@demo.local" autocomplete="username" required>
                         </div>
 
                         <div class="form-field">
                             <label for="login-password">Пароль</label>
-                            <input id="login-password" type="password" name="password" value="demo1234" autocomplete="current-password">
-                            <span class="form-hint">Для макета подойдёт любой пароль.</span>
+                            <input id="login-password" type="password" name="password" placeholder="Demo123!" autocomplete="current-password" required>
+                            <span class="form-hint">Демо-аккаунты используют пароль Demo123!.</span>
                         </div>
 
                         <div class="form-actions">
-                            <button class="btn btn-primary btn-block" type="submit">Войти в систему</button>
+                            <button class="btn btn-primary btn-block" type="submit" id="login-submit">Войти в систему</button>
                         </div>
                     </form>
 
-                    <div class="login-note">
-                        После подключения backend здесь будет запрос к IdentityService и сохранение JWT-токена.
+                    <div class="login-note" id="login-status">
+                        Вход выполняется через IdentityService с выдачей JWT-токена.
                     </div>
                 </section>
 
                 <aside class="login-side">
                     <h2>Онлайн-тестирование и проверка заданий</h2>
-                    <p>Учебный макет клиента системы: курсы, тесты, проверка работ и аналитика в одном интерфейсе.</p>
+                    <p>Клиент системы: курсы, тесты, проверка работ и аналитика в одном интерфейсе.</p>
                     <ul>
-                        <li>Четыре типа вопросов: один, несколько, текст и код</li>
-                        <li>Ручная проверка работ преподавателем</li>
+                        <li>Три типа вопросов: один вариант, несколько вариантов и код</li>
+                        <li>Автоматическая проверка и ручная оценка работ</li>
                         <li>Вердикты выполнения кода: OK, WA, TLE, CE</li>
                         <li>Аналитика по курсам и студентам</li>
                     </ul>
@@ -62,8 +62,6 @@
     </main>
 
     <footer id="app-footer" class="app-footer"></footer>
-
-    <script src="../js/data.js"></script>
     <script src="../js/app.js"></script>
     <script src="../js/layout.js"></script>
     <script src="../js/pages/login.js"></script>

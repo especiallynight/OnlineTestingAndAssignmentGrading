@@ -32,7 +32,7 @@ namespace CourseService.Data
 
             modelBuilder.Entity<Enrollment>()
                 .HasOne(enrollment => enrollment.Course)
-                .WithMany()
+                .WithMany(course => course.Enrollments)
                 .HasForeignKey(enrollment => enrollment.CourseId);
 
             modelBuilder.Entity<Enrollment>()

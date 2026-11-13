@@ -1,10 +1,12 @@
 using CourseService.Data;
+using CourseService.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Serilog;
 using System.Text;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog((context, configuration) =>
@@ -88,5 +90,103 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CourseDbContext>();
     await db.Database.MigrateAsync();
+
+    if (!await db.Courses.AnyAsync())
+    {
+        var demoTeacherId = builder.Configuration.GetValue("Demo:TeacherId", 2);
+        var demoStudentId = builder.Configuration.GetValue("Demo:StudentId", 3);
+
+        static JsonElement Json(string raw) =>
+            JsonDocument.Parse(raw).RootElement.Clone();
+
+        var csharpCourse = new Course
+        {
+            Name = "Основы программирования на C#",
+            Description = "Базовый курс по языку C#: типы данных, управляющие конструкции, ООП и работа с коллекциями.",
+            TeacherId = demoTeacherId,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        var webCourse = new Course
+        {
+            Name = "Веб-разработка: HTML, CSS, JavaScript",
+            Description = "Создание адаптивных интерфейсов, основы DOM, события и работа с сетевыми запросами.",
+            TeacherId = demoTeacherId,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        db.Courses.AddRange(csharpCourse, webCourse);
+
+        var csharpTest = new Assignment
+        {
+            Course = csharpCourse,
+            Name = "Вводный тест по C#",
+            Description = "Проверка базовых знаний платформы .NET и синтаксиса языка.",
+            MaxScore = 10,
+            TimeLimitMinutes = 30
+        };
+
+        var webTest = new Assignment
+        {
+            Course = webCourse,
+            Name = "JavaScript: основы",
+            Description = "Типы данных, массивы, функции и работа с DOM.",
+            MaxScore = 10,
+            TimeLimitMinutes = 40
+        };
+
+        db.Assignments.AddRange(csharpTest, webTest);
+
+        db.Questions.AddRange(
+            new Question
+            {
+                Assignment = csharpTest,
+                QuestionText = "Что такое CLR?",
+                QuestionType = "SingleChoice",
+                QuestionOptions = Json("""{"a":"Среда выполнения общего языка","b":"Компилятор языка C#","c":"Графическая библиотека"}"""),
+                CorrectAnswer = Json("\"a\"")
+            },
+            new Question
+            {
+                Assignment = csharpTest,
+                QuestionText = "Какие типы являются значимыми?",
+                QuestionType = "MultipleChoice",
+                QuestionOptions = Json("""{"a":"int","b":"string","c":"double","d":"bool"}"""),
+                CorrectAnswer = Json("""["a","c","d"]""")
+            },
+            new Question
+            {
+                Assignment = csharpTest,
+                QuestionText = "Напишите метод Sum для двух чисел",
+                QuestionType = "Code",
+                QuestionOptions = Json("{}"),
+                TestCases = Json("""[{"input":"1 2","expectedOutput":"3"}]""")
+            },
+            new Question
+            {
+                Assignment = webTest,
+                QuestionText = "Какой метод создаёт новый массив?",
+                QuestionType = "SingleChoice",
+                QuestionOptions = Json("""{"a":"map","b":"push","c":"pop"}"""),
+                CorrectAnswer = Json("\"a\"")
+            },
+            new Question
+            {
+                Assignment = webTest,
+                QuestionText = "Какие методы не меняют массив?",
+                QuestionType = "MultipleChoice",
+                QuestionOptions = Json("""{"a":"map","b":"filter","c":"push","d":"slice"}"""),
+                CorrectAnswer = Json("""["a","b","d"]""")
+            });
+
+        db.Enrollments.Add(new Enrollment
+        {
+            Course = csharpCourse,
+            StudentId = demoStudentId,
+            EnrolledAt = DateTimeOffset.UtcNow
+        });
+
+        await db.SaveChangesAsync();
+    }
 }
 app.Run();

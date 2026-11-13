@@ -7,5 +7,7 @@
         public DateTimeOffset CreatedAt { get; set; }
         public string? Description { get; set; }
         public int TeacherId { get; set; }
+        public int StudentsCount { get; set; }
+        public int AssignmentsCount { get; set; }
     }
 }

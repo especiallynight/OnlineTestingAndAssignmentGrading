@@ -22,12 +22,8 @@
 
       <div class="toolbar">
         <div class="form-field">
-          <label for="course-status-filter">Статус курса</label>
-          <select id="course-status-filter">
-            <option value="all">Все курсы</option>
-            <option value="active">Активные</option>
-            <option value="draft">Черновики</option>
-          </select>
+          <label for="course-search">Поиск по названию</label>
+          <input id="course-search" type="search" placeholder="Например, C#">
         </div>
         <div class="form-field">
           <label for="course-teacher-filter">Преподаватель</label>
@@ -47,8 +43,6 @@
   </main>
 
   <footer id="app-footer" class="app-footer"></footer>
-
-  <script src="../js/data.js"></script>
   <script src="../js/layout.js"></script>
   <script src="../js/app.js"></script>
   <script src="../js/pages/courses.js"></script>

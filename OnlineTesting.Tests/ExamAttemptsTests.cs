@@ -59,7 +59,7 @@ public class ExamControllerTests
     public async Task StartAttempt_Success()
     {
         var options = new DbContextOptionsBuilder<ExamDbContext>()
-            .UseInMemoryDatabase("TestDb_Success") 
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
         using var context = new ExamDbContext(options);
@@ -80,10 +80,10 @@ public class ExamControllerTests
     // Проверяет запрет повторного запуска уже начатой попытки экзамена.
     // Ожидает: 409 Conflict.
     [Fact]
-    public async Task StartAttemptReturnsConflict()
+    public async Task StartAttempt_WhenAlreadyInProgress()
     {
         var options = new DbContextOptionsBuilder<ExamDbContext>()
-            .UseInMemoryDatabase("TestDb_Conflict") 
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
 
         using var context = new ExamDbContext(options);

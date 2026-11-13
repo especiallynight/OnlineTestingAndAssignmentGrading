@@ -58,6 +58,12 @@ namespace OnlineTesting.Tests
 
             Assert.Equal("Программирование на C#", courseResponse.Name);
             Assert.Equal(2, courseResponse.TeacherId);
+
+            var savedCourse = await context.Courses.FirstOrDefaultAsync();
+            
+            Assert.NotNull(savedCourse);
+            Assert.Equal("Программирование на C#", savedCourse.Name);
+            Assert.Equal(2, savedCourse.TeacherId);
         }
 
         // Проверяет, что преподаватель не может удалить чужой курс.
@@ -81,22 +87,27 @@ namespace OnlineTesting.Tests
             var result = await controller.DeleteCourse(1);
 
             Assert.IsType<ForbidResult>(result);
+
         }
 
-        // Проверяет запрет создания задания с максимальной оценкой меньше или равной 0.
-        // Ожидает: ArgumentException с сообщением "Максимальный счет должен быть больше нуля".
+        // Проверяет, что студент не может создавать курс.
+        // Ожидает: ForbidResult (403 Forbidden).
         [Fact]
-        public async Task CreateAssignment_WithInvalidMaxScore()
+        public async Task CreateCourse_WhenUserIsStudent()
         {
+            var context = GetDbContext();
+            var controller = GetController(context, userId: "10", role: "Student");
 
-            var assignmentDto = new { Title = "Test", MaxScore = 0 };
-
-            var exception = await Assert.ThrowsAsync<ArgumentException>(async () =>
+            var dto = new CreateCourseDTO
             {
-                throw new ArgumentException("Максимальный счет должен быть больше нуля."); 
-            });
+                Name = "Тестовый курс",
+                Description = "Описание"
+            };
 
-            Assert.Contains("Максимальный счет должен быть больше нуля", exception.Message);
+            var result = await controller.CreateCourse(dto);
+
+            Assert.IsType<ForbidResult>(result.Result);
+            Assert.Empty(context.Courses);
         }
     }
 }

@@ -102,6 +102,41 @@ namespace CourseService.Controllers
 
 
         [Authorize(Roles = "Teacher")]
+        [HttpPut("assignments/{assignment_id:int}")]
+        public async Task<ActionResult<AssignmentResponseDTO>> UpdateAssignment(int assignment_id, UpdateAssignmentDTO dto)
+        {
+            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdStr, out var teacherId)) return Unauthorized();
+
+            var assignment = await _context.Assignments
+                .Include(item => item.Course)
+                .FirstOrDefaultAsync(item => item.AssignmentId == assignment_id);
+
+            if (assignment == null) return NotFound("Задание не найдено");
+            if (assignment.Course == null) return NotFound("Курс задания не найден");
+            if (assignment.Course.TeacherId != teacherId) return Forbid();
+
+            assignment.Name = dto.Name;
+            assignment.Description = dto.Description;
+            assignment.MaxScore = dto.MaxScore;
+            assignment.TimeLimitMinutes = dto.TimeLimitMinutes;
+
+            await _context.SaveChangesAsync();
+
+            var response = new AssignmentResponseDTO
+            {
+                AssignmentId = assignment.AssignmentId,
+                CourseId = assignment.CourseId,
+                Name = assignment.Name,
+                Description = assignment.Description,
+                MaxScore = assignment.MaxScore,
+                TimeLimitMinutes = assignment.TimeLimitMinutes
+            };
+
+            return Ok(response);
+        }
+
+        [Authorize(Roles = "Teacher")]
         [HttpDelete("assignments/{assignment_id:int}")]
         public async Task<IActionResult> DeleteAssignment(int assignment_id)
         {

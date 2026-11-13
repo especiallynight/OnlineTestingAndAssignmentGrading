@@ -1,82 +1,93 @@
 /*
- * login.js — страница входа (мок).
- * Пароль не проверяется: выбираем пользователя из Mock.users
- * и сохраняем его роль в localStorage.
+ * login.js — страница входа.
+ * Проверяет учётные данные через IdentityService и сохраняет JWT-сессию.
  */
 (function () {
   'use strict';
 
-  // Заполняет выпадающий список пользователей, группируя их по ролям.
-  function fillUserSelect() {
-    var select = document.getElementById('login-user');
-    if (!select) {
-      return;
-    }
+  var App = window.App;
 
-    var groups = [
-      { role: 'student', title: 'Студенты' },
-      { role: 'teacher', title: 'Преподаватели' },
-      { role: 'admin', title: 'Администраторы' }
-    ];
+  var DEMO_ACCOUNTS = [
+    { email: 'student@demo.local', role: 'student', title: 'Студент' },
+    { email: 'teacher@demo.local', role: 'teacher', title: 'Преподаватель' },
+    { email: 'admin@demo.local', role: 'admin', title: 'Администратор' }
+  ];
 
-    select.innerHTML = groups.map(function (group) {
-      var options = window.Mock.users.filter(function (user) {
-        return user.role === group.role;
-      }).map(function (user) {
-        return '<option value="' + user.id + '">' +
-          window.App.escapeHtml(user.fullName) + ' — ' +
-          window.App.escapeHtml(user.email) +
-          '</option>';
-      }).join('');
+  var DEMO_PASSWORD = 'Demo123!';
 
-      if (!options) {
-        return '';
-      }
-      return '<optgroup label="' + group.title + '">' + options + '</optgroup>';
-    }).join('');
-  }
-
-  // Показывает список демо-учёток справа от формы.
+  // Показывает демо-учётки с кнопками автозаполнения формы.
   function renderDemoAccounts() {
     var container = document.getElementById('demo-accounts');
     if (!container) {
       return;
     }
-    container.innerHTML = window.Mock.users.map(function (user) {
-      return '<li><span>' + window.App.escapeHtml(user.fullName) + '</span>' +
-        '<span class="muted">' + window.App.statusLabel(user.role) + '</span></li>';
+
+    container.innerHTML = DEMO_ACCOUNTS.map(function (account) {
+      return '<button class="demo-account" type="button" data-demo-email="' +
+        App.escapeHtml(account.email) + '">' +
+        '<span class="demo-account-role">' + App.escapeHtml(account.title) + '</span>' +
+        '<span class="muted small">' + App.escapeHtml(account.email) + '</span>' +
+        '</button>';
     }).join('');
+
+    container.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-demo-email]');
+      if (!button) {
+        return;
+      }
+      document.getElementById('login-email').value = button.getAttribute('data-demo-email');
+      document.getElementById('login-password').value = DEMO_PASSWORD;
+      document.getElementById('login-email').focus();
+    });
   }
 
-  // Обрабатывает вход: сохраняет пользователя и роль, уводит на дашборд.
-  function handleLogin(event) {
+  function setStatus(message, kind) {
+    var status = document.getElementById('login-status');
+    if (!status) {
+      return;
+    }
+    status.textContent = message;
+    status.className = 'login-note' + (kind ? ' login-note-' + kind : '');
+  }
+
+  // Обрабатывает вход через реальный API.
+  async function handleLogin(event) {
     event.preventDefault();
 
-    var select = document.getElementById('login-user');
-    if (!select) {
+    var email = document.getElementById('login-email').value.trim();
+    var password = document.getElementById('login-password').value;
+    var submit = document.getElementById('login-submit');
+
+    if (!email || !password) {
+      setStatus('Укажите почту и пароль.', 'error');
       return;
     }
 
-    var user = window.App.getUserById(select.value);
-    if (!user) {
-      alert('Выберите пользователя из списка.');
-      return;
-    }
+    submit.disabled = true;
+    submit.textContent = 'Вход…';
+    setStatus('Проверяем учётные данные…');
 
-    window.App.setUser(user);
-    window.App.setRole(user.role);
-    location.href = window.App.url('index.html');
+    try {
+      var user = await App.api.auth.login(email, password);
+      setStatus('Вход выполнен. Перенаправляем на дашборд…', 'success');
+      location.href = App.url('index.html');
+    } catch (error) {
+      setStatus(error.message || 'Не удалось войти.', 'error');
+      submit.disabled = false;
+      submit.textContent = 'Войти в систему';
+    }
   }
 
-  // Инициализирует страницу входа.
   function init() {
-    fillUserSelect();
     renderDemoAccounts();
 
-    var form = document.getElementById('login-form');
-    if (form) {
-      form.addEventListener('submit', handleLogin);
+    var emailInput = document.getElementById('login-email');
+    var current = App.getUser();
+    if (emailInput && current && current.email) {
+      emailInput.value = current.email;
     }
+
+    App.bindForm('login-form', handleLogin);
   }
 
   init();

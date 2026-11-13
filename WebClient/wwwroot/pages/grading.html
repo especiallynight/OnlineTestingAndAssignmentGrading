@@ -13,8 +13,8 @@
     <div class="container">
       <div class="page-head">
         <div>
-          <h1>Работы на ручной проверке</h1>
-          <p class="page-subtitle">Попытки с развёрнутыми ответами, ожидающие оценки преподавателя.</p>
+          <h1>Проверка работ</h1>
+          <p class="page-subtitle">Попытки студентов, автоматические оценки и ручная проверка.</p>
           <span class="service-note">Сервис: GradingService</span>
         </div>
         <div id="grading-actions"></div>
@@ -22,18 +22,30 @@
 
       <div class="stats-grid" id="grading-stats"></div>
 
-      <h2 class="section-title">Очередь проверки</h2>
+      <div class="toolbar">
+        <div class="form-field">
+          <label for="grading-filter">Показать</label>
+          <select id="grading-filter">
+            <option value="all">Все работы</option>
+            <option value="pending">Без оценки</option>
+            <option value="graded">С оценкой</option>
+          </select>
+        </div>
+      </div>
+
+      <h2 class="section-title">Работы студентов</h2>
       <div id="grading-table"></div>
 
       <div class="notice">
-        Оценка выставляется вручную. В макете кнопка «Оценить» показывает заглушку — проверка появится после подключения GradingService.
+        Оценки выставляются автоматически после завершения попытки.
+        Кнопка «Открыть» показывает ответы студента; если оценки ещё нет,
+        её можно выставить вручную.
       </div>
     </div>
   </main>
 
   <footer id="app-footer" class="app-footer"></footer>
 
-  <script src="../js/data.js"></script>
   <script src="../js/layout.js"></script>
   <script src="../js/app.js"></script>
   <script src="../js/pages/grading.js"></script>

@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Xunit;
 
 namespace IdentityService.Tests; 
 
@@ -86,17 +85,48 @@ public class IdentityTests
         Assert.False(string.IsNullOrEmpty(response.AccessToken));
         Assert.False(string.IsNullOrEmpty(response.RefreshToken));
     }
-    // Проверяет, что пароль при регистрации хэшируется, а не сохраняется в открытом виде.
-    // Ожидает: хэшированный пароль отличается от исходного и имеет длину более 20 символов.
+
+    // Проверяет регистрацию пользователя и хэширование пароля.
+    // Ожидает: успешный ответ, пользователь сохранён в БД, пароль захэширован, роль Student.
     [Fact]
-    public void RegisterUser_ValidData_HashesPassword()
+    public async Task Register_ValidData_HashesPassword()
     {
-        string plainPassword = "123";
+        var context = GetDbContext();
+        var controller = GetController(context);
 
-        string hashedPassword = "$2a$11$SomeMockedHashedValueThatIsNotPlainText"; 
+        var dto = new CreateUserDTO
+        {
+            Email = "newstudent@test.com",
+            Password = "123456",
+            FirstName = "Мария",
+            LastName = "Иванова"
+        };
 
-        Assert.NotEqual(plainPassword, hashedPassword);
-        Assert.True(hashedPassword.Length > 20); 
+        var result = await controller.Register(dto);
+
+        Assert.IsType<OkObjectResult>(result);
+
+        var savedUser = await context.Users
+            .FirstOrDefaultAsync(u => u.Email == "newstudent@test.com");
+
+        Assert.NotNull(savedUser);
+
+        Assert.Equal("Мария", savedUser.FirstName);
+        Assert.Equal("Иванова", savedUser.LastName);
+        Assert.Equal(UserRole.Student, savedUser.Role);
+
+        Assert.NotEqual("123456", savedUser.PasswordHash);
+
+        var passwordHasher = new PasswordHasher<User>();
+
+        var verification = passwordHasher.VerifyHashedPassword(
+            savedUser,
+            savedUser.PasswordHash,
+            "123456");
+
+        Assert.Equal(
+            PasswordVerificationResult.Success,
+            verification);
     }
-
 }
+
