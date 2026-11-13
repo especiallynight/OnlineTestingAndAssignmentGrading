@@ -33,6 +33,7 @@
     <ProjectReference Include="..\GradingService\GradingService.csproj" />
     <ProjectReference Include="..\AnalyticsService\AnalyticsService.csproj" />
     <ProjectReference Include="..\IdentityService\IdentityService.csproj" />
+    <ProjectReference Include="..\WebClient\WebClient.csproj" />
   </ItemGroup>
 
 </Project>

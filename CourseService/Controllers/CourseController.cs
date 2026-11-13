@@ -27,7 +27,7 @@ namespace CourseService.Controllers
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
         };
-        [HttpGet]
+        
         [HttpGet("{course_id:int}")]
         public async Task<ActionResult<CourseResponseDTO>> GetCourse(int course_id)
         {

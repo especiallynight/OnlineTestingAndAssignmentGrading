@@ -119,6 +119,31 @@
           "Port": 8080
         }
       ]
+    },
+    {
+      "UpstreamPathTemplate": "/hubs/grading/negotiate",
+      "UpstreamHttpMethod": [ "Post", "Get", "Options" ],
+      "DownstreamPathTemplate": "/gradingHub/negotiate",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "analytics-service",
+          "Port": 8080
+        }
+      ]
+    },
+    {
+      "UpstreamPathTemplate": "/hubs/grading",
+      "UpstreamHttpMethod": [ "Get" ],
+      "DownstreamPathTemplate": "/gradingHub",
+      "DownstreamScheme": "ws",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "analytics-service",
+          "Port": 8080
+        }
+      ],
+      "Timeout": 120000
     }
   ],
   "GlobalConfiguration": { "BaseUrl": "http://localhost:8080" }

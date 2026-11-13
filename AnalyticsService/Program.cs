@@ -1,6 +1,6 @@
-using AnalyticsService.Consumers; 
+using AnalyticsService.Consumers;
 using AnalyticsService.Data;
-using MassTransit;                
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -8,14 +8,12 @@ using Serilog;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
-
 builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration)
-                 .WriteTo.Console());
+    .WriteTo.Console());
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secretKey = jwtSettings["SecretKey"];
-
 if (string.IsNullOrWhiteSpace(secretKey))
 {
     throw new InvalidOperationException("JWT SecretKey is not configured.");
@@ -26,7 +24,6 @@ builder.Services
     .AddJwtBearer(options =>
     {
         options.MapInboundClaims = false;
-
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -35,20 +32,14 @@ builder.Services
             ValidAudience = jwtSettings["Audience"],
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(secretKey)
-            ),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
             RoleClaimType = "role"
         };
     });
 
 builder.Services.AddAuthorization();
-
 builder.Services.AddDbContext<AnalyticsDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-    ));
-
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddStackExchangeRedisCache(options =>
 {
@@ -56,13 +47,10 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.InstanceName = "Analytics:";
 });
 
-
 builder.Services.AddMassTransit(x =>
 {
     x.SetKebabCaseEndpointNameFormatter();
-
     x.AddConsumer<AttemptGradedConsumer>();
-
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host("rabbitmq", "/", h =>
@@ -86,7 +74,6 @@ builder.Services.AddSwaggerGen(options =>
         BearerFormat = "JWT",
         Description = "Введите access token"
     });
-
     options.AddSecurityRequirement(document =>
         new Microsoft.OpenApi.OpenApiSecurityRequirement
         {
@@ -94,10 +81,11 @@ builder.Services.AddSwaggerGen(options =>
         });
 });
 
+builder.Services.AddCors();
+
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
-
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -108,6 +96,8 @@ app.UseSwaggerUI(c =>
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseCors(p => p.WithOrigins("http://localhost:5238", "http://localhost:5000", "http://localhost:8080").AllowAnyMethod().AllowAnyHeader());
+
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
 app.MapHub<AnalyticsService.Hubs.GradingHub>("/gradingHub");
@@ -117,5 +107,4 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<AnalyticsDbContext>();
     await db.Database.MigrateAsync();
 }
-
 app.Run();

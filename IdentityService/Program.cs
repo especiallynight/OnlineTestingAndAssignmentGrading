@@ -10,16 +10,13 @@ using System.Text;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
-
 System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
-
 builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration)
-                 .WriteTo.Console());
+    .WriteTo.Console());
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secretKey = jwtSettings["SecretKey"];
-
 if (string.IsNullOrWhiteSpace(secretKey))
 {
     throw new InvalidOperationException("JWT SecretKey is not configured.");
@@ -30,37 +27,24 @@ builder.Services
     .AddJwtBearer(options =>
     {
         options.MapInboundClaims = false;
-
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidIssuer = jwtSettings["Issuer"],
-
             ValidateAudience = true,
             ValidAudience = jwtSettings["Audience"],
-
             ValidateLifetime = true,
-
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(secretKey)
-            ),
-
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
             RoleClaimType = "role"
         };
     });
 
 builder.Services.AddAuthorization();
-
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
-
 builder.Services.AddDbContext<IdentityDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-    ));
-
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<JwtService>();
-
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -72,7 +56,6 @@ builder.Services.AddSwaggerGen(options =>
         BearerFormat = "JWT",
         Description = "Введите JWT токен"
     });
-
     options.AddSecurityRequirement(document =>
         new OpenApiSecurityRequirement
         {
@@ -80,10 +63,11 @@ builder.Services.AddSwaggerGen(options =>
         });
 });
 
+builder.Services.AddCors();
+
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
-
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -94,6 +78,7 @@ app.UseSwaggerUI(c =>
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseCors(p => p.WithOrigins("http://localhost:5238", "http://localhost:5000", "http://localhost:8080").AllowAnyMethod().AllowAnyHeader());
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
@@ -116,5 +101,4 @@ using (var scope = app.Services.CreateScope())
         await db.SaveChangesAsync();
     }
 }
-
 app.Run();

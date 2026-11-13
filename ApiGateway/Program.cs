@@ -16,6 +16,20 @@ var app = builder.Build();
 
 app.UseSerilogRequestLogging();
 
+// Ocelot обрабатывает все запросы, поэтому health-check регистрируем
+// отдельным middleware до него.
+app.Use(async (context, next) =>
+{
+    if (context.Request.Path.Equals("/health", StringComparison.OrdinalIgnoreCase))
+    {
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync("{\"status\":\"healthy\"}");
+        return;
+    }
+
+    await next();
+});
+
 await app.UseOcelot();
 
 app.Run();

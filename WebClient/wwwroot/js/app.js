@@ -1,6 +1,6 @@
 /*
  * app.js — глобальный объект window.App с общими хелперами.
- * Здесь только вспомогательные функции для отрисовки мока:
+ * Здесь только вспомогательные функции для отрисовки макета:
  * работа с ролью, таблицами, карточками, бейджами и форматированием.
  */
 window.App = (function () {
@@ -8,6 +8,19 @@ window.App = (function () {
 
   var ROLE_KEY = 'onlineTestingRole';
   var USER_KEY = 'onlineTestingUser';
+  var TOKEN_KEY = 'jwt';
+
+  // Базовый адрес ApiGateway. Можно переопределить через window.API_BASE.
+  // В Docker клиент открыт на порту 5000, а gateway — на 5006;
+  // при локальном запуске WebClient используется порт gateway 5130.
+  function apiBase() {
+    if (window.API_BASE) {
+      return window.API_BASE;
+    }
+    return location.port === '5000'
+      ? 'http://localhost:5006'
+      : 'http://localhost:5130';
+  }
 
   // Возвращает сохранённую роль или null, если пользователь ещё не вошёл.
   function getRole() {
@@ -37,6 +50,7 @@ window.App = (function () {
   function clearSession() {
     localStorage.removeItem(ROLE_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(TOKEN_KEY);
   }
 
   // Строит относительный путь к странице с учётом нахождения в /pages/.
@@ -149,7 +163,7 @@ window.App = (function () {
         : '';
       var meta = item.meta && item.meta.length
         ? '<ul class="card-meta">' + item.meta.map(function (entry) {
-            return '<li>' + entry + '</li>';
+            return '<li>' + escapeHtml(entry) + '</li>';
           }).join('') + '</ul>'
         : '';
       var link = item.href
@@ -309,7 +323,48 @@ window.App = (function () {
     return params.get(name);
   }
 
+  // Универсальный запрос к ApiGateway. Используется при подключении backend.
+  async function request(endpoint, options) {
+    var settings = options || {};
+    var headers = Object.assign({ 'Content-Type': 'application/json' }, settings.headers || {});
+    var token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+      headers.Authorization = 'Bearer ' + token;
+    }
+
+    var response = await fetch(apiBase() + endpoint, Object.assign({}, settings, { headers: headers }));
+
+    if (response.status === 401) {
+      clearSession();
+      location.href = url('login.html');
+      throw new Error('Требуется повторный вход');
+    }
+
+    if (response.status === 204) {
+      return true;
+    }
+
+    var text = await response.text();
+    var data = null;
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch (error) {
+        data = text;
+      }
+    }
+
+    if (!response.ok) {
+      var message = data && data.message ? data.message : (typeof data === 'string' ? data : 'Ошибка сервера');
+      throw new Error(message);
+    }
+
+    return data;
+  }
+
   return {
+    apiBase: apiBase,
+    request: request,
     getRole: getRole,
     setRole: setRole,
     getUser: getUser,

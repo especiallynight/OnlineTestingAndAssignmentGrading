@@ -9,14 +9,12 @@ using System.Text;
 using GradingService.Consumers;
 
 var builder = WebApplication.CreateBuilder(args);
-
 builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration)
-                 .WriteTo.Console());
+    .WriteTo.Console());
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secretKey = jwtSettings["SecretKey"];
-
 if (string.IsNullOrWhiteSpace(secretKey))
 {
     throw new InvalidOperationException("JWT SecretKey is not configured.");
@@ -27,32 +25,23 @@ builder.Services
     .AddJwtBearer(options =>
     {
         options.MapInboundClaims = false;
-
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidIssuer = jwtSettings["Issuer"],
-
             ValidateAudience = true,
             ValidAudience = jwtSettings["Audience"],
-
             ValidateLifetime = true,
-
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(secretKey)
-            ),
-
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
             RoleClaimType = "role"
         };
     });
 
 builder.Services.AddAuthorization();
-
 builder.Services.AddDbContext<GradesDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")
-    ));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddMassTransit(x =>
 {
     x.SetKebabCaseEndpointNameFormatter();
@@ -62,8 +51,6 @@ builder.Services.AddMassTransit(x =>
         o.UsePostgres();
         o.UseBusOutbox();
     });
-
-
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host("rabbitmq", "/", h =>
@@ -77,16 +64,11 @@ builder.Services.AddMassTransit(x =>
 
 builder.Services.AddHttpClient("ExamService", client =>
 {
-    client.BaseAddress = new Uri(
-        builder.Configuration["Services:ExamService"]!
-    );
+    client.BaseAddress = new Uri(builder.Configuration["Services:ExamService"]!);
 });
-
 builder.Services.AddHttpClient("CourseService", client =>
 {
-    client.BaseAddress = new Uri(
-        builder.Configuration["Services:CourseService"]!
-    );
+    client.BaseAddress = new Uri(builder.Configuration["Services:CourseService"]!);
 });
 
 builder.Services.AddControllers();
@@ -100,14 +82,14 @@ builder.Services.AddSwaggerGen(options =>
         BearerFormat = "JWT",
         Description = "Введите access token"
     });
-
     options.AddSecurityRequirement(document =>
         new OpenApiSecurityRequirement
         {
             [new OpenApiSecuritySchemeReference("Bearer", document)] = []
         });
+});
 
-}); ;
+builder.Services.AddCors();
 
 var app = builder.Build();
 
@@ -122,6 +104,8 @@ app.UseSwaggerUI(c =>
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseCors(p => p.WithOrigins("http://localhost:5238", "http://localhost:5000", "http://localhost:8080").AllowAnyMethod().AllowAnyHeader());
+
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
 
@@ -130,5 +114,4 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<GradesDbContext>();
     await db.Database.MigrateAsync();
 }
-
 app.Run();

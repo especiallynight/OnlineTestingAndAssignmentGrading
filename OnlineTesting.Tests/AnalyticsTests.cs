@@ -5,6 +5,8 @@ using AnalyticsService.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using Moq;
 using System.Security.Claims;
 
 namespace AnalyticsService.Tests;
@@ -26,7 +28,7 @@ public class AnalyticsControllerTests
             new Claim("sub", userId),
             new Claim("role", role)
         }));
-        return new AnalyticsController(db)
+        return new AnalyticsController(db, new Mock<IDistributedCache>().Object)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } }
         };

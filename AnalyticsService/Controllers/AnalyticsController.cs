@@ -4,6 +4,9 @@ using AnalyticsService.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Security.Claims;
+using System.Text.Json;
 
 namespace AnalyticsService.Controllers
 {
@@ -13,17 +16,26 @@ namespace AnalyticsService.Controllers
     public class AnalyticsController : ControllerBase
     {
         private readonly AnalyticsDbContext _analyticsDbContext;
+        private readonly IDistributedCache _cache;
 
-        public AnalyticsController(AnalyticsDbContext analyticsDbContext)
+        private static readonly DistributedCacheEntryOptions CacheOptions = new()
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2)
+        };
+
+        public AnalyticsController(AnalyticsDbContext analyticsDbContext, IDistributedCache cache)
         {
             _analyticsDbContext = analyticsDbContext;
+            _cache = cache;
         }
 
         [HttpGet("students/{studentId:int}")]
         [Authorize(Roles = "Student,Admin")]
         public async Task<IActionResult> GetStudentStatistics(int studentId)
         {
-            var currentUserId = User.FindFirst("sub")?.Value;
+            // При MapInboundClaims=false идентификатор приходит в claim "sub".
+            var currentUserId = User.FindFirst("sub")?.Value
+                ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (!int.TryParse(currentUserId, out var userId))
                 return Unauthorized();
@@ -51,6 +63,13 @@ namespace AnalyticsService.Controllers
         [Authorize(Roles = "Teacher,Admin")]
         public async Task<IActionResult> GetCourseStatistics(int courseId)
         {
+            var cacheKey = $"analytics:course:{courseId}";
+            var cached = await _cache.GetStringAsync(cacheKey);
+            if (cached != null)
+            {
+                return Ok(JsonSerializer.Deserialize<CourseStatisticsResponseDTO>(cached));
+            }
+
             var stats = await _analyticsDbContext.StudentStatistics
                 .Where(s => s.CourseId == courseId)
                 .Select(s => new { s.CompletedAttempts, s.AverageScore, s.UpdatedAt })
@@ -65,13 +84,16 @@ namespace AnalyticsService.Controllers
                 : 0;
             var lastUpdate = stats.Max(s => s.UpdatedAt);
 
-            return Ok(new CourseStatisticsResponseDTO
+            var response = new CourseStatisticsResponseDTO
             {
                 CourseId = courseId,
                 CompletedAttempts = totalAttempts,
                 AverageScore = averageScore,
                 UpdatedAt = lastUpdate
-            });
+            };
+
+            await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(response), CacheOptions);
+            return Ok(response);
         }
 
         [HttpPost("students")]
@@ -121,6 +143,9 @@ namespace AnalyticsService.Controllers
             }
 
             await _analyticsDbContext.SaveChangesAsync();
+
+            // Сводка по курсу изменилась — сбрасываем кэш.
+            await _cache.RemoveAsync($"analytics:course:{dto.CourseId}");
 
             return Ok();
         }

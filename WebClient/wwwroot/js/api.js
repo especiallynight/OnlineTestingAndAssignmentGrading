@@ -1,20 +1,22 @@
-﻿const API_BASE = 'http://localhost:5006';
+﻿const API = 'http://localhost:5006';
+
+function token() { return localStorage.getItem('token'); }
 
 window.Api = {
     async login(email, password) {
-        const res = await fetch(`${API_BASE}/api/auth/login`, {
+        const r = await fetch(`${API}/api/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
         });
-        if (!res.ok) throw new Error('Login failed');
-        return res.json();
+        if (!r.ok) throw new Error('Неверный email или пароль');
+        return r.json();
     },
 
-    async getCourses(token) {
-        const res = await fetch(`${API_BASE}/api/courses`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+    async courses() {
+        const r = await fetch(`${API}/api/courses`, {
+            headers: { 'Authorization': `Bearer ${token()}` }
         });
-        return res.json();
+        return r.json();
     }
 };

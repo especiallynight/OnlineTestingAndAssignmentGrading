@@ -4,6 +4,7 @@ using AnalyticsService.Models;
 using MassTransit;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Shared.Events;
 
 namespace AnalyticsService.Consumers;
@@ -12,10 +13,16 @@ public class AttemptGradedConsumer : IConsumer<AttemptGradedEvent>
 {
     private readonly AnalyticsDbContext _context;
     private readonly IHubContext<GradingHub> _hubContext;
-    public AttemptGradedConsumer(AnalyticsDbContext context, IHubContext<GradingHub> hubContext)
+    private readonly IDistributedCache _cache;
+
+    public AttemptGradedConsumer(
+        AnalyticsDbContext context,
+        IHubContext<GradingHub> hubContext,
+        IDistributedCache cache)
     {
         _context = context;
         _hubContext = hubContext;
+        _cache = cache;
     }
 
     public async Task Consume(ConsumeContext<AttemptGradedEvent> context)
@@ -62,6 +69,9 @@ public class AttemptGradedConsumer : IConsumer<AttemptGradedEvent>
 
         if (is_new_result)
         {
+            // Сводка по курсу изменилась — сбрасываем кэш.
+            await _cache.RemoveAsync($"analytics:course:{msg.CourseId}");
+
             await _hubContext.Clients.All.SendAsync(
                 "ReceiveGradeUpdate",
                 msg.AttemptId,
