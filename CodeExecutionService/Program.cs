@@ -46,4 +46,6 @@ app.Use(async (ctx, next) =>
 });
 app.MapControllers();
 
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+
 app.Run();
