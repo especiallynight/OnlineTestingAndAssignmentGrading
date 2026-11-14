@@ -759,6 +759,78 @@ main {
   gap: 14px;
 }
 
+/* ---------- Теория курса ---------- */
+
+.theory-section {
+  margin-bottom: 8px;
+}
+
+.theory-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.theory-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.theory-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.theory-head h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.theory-preview {
+  flex: 1;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.theory-preview p,
+.theory-content p {
+  margin: 0 0 10px;
+}
+
+.theory-preview p:last-child,
+.theory-content p:last-child {
+  margin-bottom: 0;
+}
+
+.theory-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.theory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.theory-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .module-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);

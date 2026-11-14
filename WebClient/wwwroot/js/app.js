@@ -319,6 +319,18 @@ window.App = (function () {
     };
   }
 
+  function normalizeMaterial(material) {
+    return {
+      id: material.courseMaterialId,
+      courseMaterialId: material.courseMaterialId,
+      courseId: material.courseId,
+      title: material.title,
+      content: material.content || '',
+      sortOrder: material.sortOrder || 0,
+      createdAt: material.createdAt
+    };
+  }
+
   function normalizeAssignment(assignment) {
     return {
       id: assignment.assignmentId,
@@ -547,6 +559,30 @@ window.App = (function () {
       },
       enrollment: function (id) {
         return request('/api/courses/' + id + '/enrollment');
+      }
+    },
+
+    materials: {
+      list: async function (courseId) {
+        return (await request('/api/courses/' + courseId + '/materials') || [])
+          .map(normalizeMaterial);
+      },
+      create: function (courseId, payload) {
+        return request('/api/courses/' + courseId + '/materials', {
+          method: 'POST',
+          body: payload
+        });
+      },
+      update: function (courseId, id, payload) {
+        return request('/api/courses/' + courseId + '/materials/' + id, {
+          method: 'PUT',
+          body: payload
+        });
+      },
+      remove: function (courseId, id) {
+        return request('/api/courses/' + courseId + '/materials/' + id, {
+          method: 'DELETE'
+        });
       }
     },
 

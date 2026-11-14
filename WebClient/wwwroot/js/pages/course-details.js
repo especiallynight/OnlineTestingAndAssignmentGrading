@@ -10,6 +10,7 @@
   var state = {
     course: null,
     assignments: [],
+    materials: [],
     questionsCount: {},
     role: null,
     user: null,
@@ -26,6 +27,13 @@
     return state.attempts[assignmentId] || null;
   }
 
+  // Редактировать курс и теорию может только преподаватель — владелец курса.
+  function canEditCourse() {
+    return state.role === 'teacher' &&
+      state.user &&
+      String(state.course.teacherId) === String(state.user.id);
+  }
+
   // Рисует шапку курса с основной информацией и действием.
   function renderHero() {
     var container = document.getElementById('course-hero');
@@ -37,7 +45,7 @@
     var teacher = App.getUserById(course.teacherId);
     var action = '';
 
-    if (state.role === 'teacher' && state.user && course.teacherId === state.user.id) {
+    if (canEditCourse()) {
       action = '<button class="btn btn-primary" type="button" id="course-action-btn">Редактировать курс</button>';
     } else if (state.role === 'student') {
       action = state.enrolled
@@ -117,6 +125,172 @@
       App.notify(error.message, 'error');
       button.disabled = false;
     }
+  }
+
+  // Экранирует текст и превращает пустые строки в абзацы, а переносы — в <br>.
+  function renderTheoryText(content, maxLength) {
+    var text = String(content || '');
+    if (maxLength && text.length > maxLength) {
+      text = text.slice(0, maxLength).replace(/\s+\S*$/, '') + '…';
+    }
+    return text.split(/\n{2,}/).map(function (paragraph) {
+      return '<p>' + App.escapeHtml(paragraph).replace(/\n/g, '<br>') + '</p>';
+    }).join('');
+  }
+
+  function findMaterial(id) {
+    return state.materials.find(function (material) {
+      return String(material.id) === String(id);
+    }) || null;
+  }
+
+  // Рисует блок теории: карточки материалов и действия преподавателя.
+  function renderTheory() {
+    var container = document.getElementById('course-theory');
+    var actions = document.getElementById('course-theory-actions');
+    if (!container) {
+      return;
+    }
+
+    if (actions) {
+      actions.innerHTML = canEditCourse()
+        ? '<button class="btn btn-sm btn-primary" type="button" id="add-material-btn">Добавить материал</button>'
+        : '';
+      var addButton = document.getElementById('add-material-btn');
+      if (addButton) {
+        addButton.addEventListener('click', function () {
+          openMaterialEditor(null);
+        });
+      }
+    }
+
+    if (!state.materials.length) {
+      container.innerHTML = '<div class="empty-state"><p class="muted">' +
+        (canEditCourse()
+          ? 'Теория пока не добавлена. Нажмите «Добавить материал».'
+          : 'В курсе пока нет материалов.') +
+        '</p></div>';
+      return;
+    }
+
+    container.innerHTML = state.materials.map(function (material, index) {
+      var controls = canEditCourse()
+        ? '<div class="theory-actions">' +
+          '<button class="btn btn-sm btn-outline" type="button" data-edit="' + material.id + '">Редактировать</button>' +
+          '<button class="btn btn-sm btn-danger-soft" type="button" data-delete="' + material.id + '">Удалить</button>' +
+          '</div>'
+        : '';
+
+      return '<article class="theory-card">' +
+        '<div class="theory-head">' +
+        '<span class="module-number">' + (index + 1) + '</span>' +
+        '<h3>' + App.escapeHtml(material.title) + '</h3>' +
+        '</div>' +
+        '<div class="theory-preview">' + renderTheoryText(material.content, 280) + '</div>' +
+        '<div class="theory-foot">' +
+        '<button class="btn btn-sm btn-soft" type="button" data-read="' + material.id + '">Читать</button>' +
+        controls +
+        '</div>' +
+        '</article>';
+    }).join('');
+
+    Array.prototype.forEach.call(container.querySelectorAll('[data-read]'), function (button) {
+      button.addEventListener('click', function () {
+        openMaterialReader(findMaterial(button.getAttribute('data-read')));
+      });
+    });
+    Array.prototype.forEach.call(container.querySelectorAll('[data-edit]'), function (button) {
+      button.addEventListener('click', function () {
+        openMaterialEditor(findMaterial(button.getAttribute('data-edit')));
+      });
+    });
+    Array.prototype.forEach.call(container.querySelectorAll('[data-delete]'), function (button) {
+      button.addEventListener('click', function () {
+        removeMaterial(findMaterial(button.getAttribute('data-delete')));
+      });
+    });
+  }
+
+  // Открывает материал целиком в модальном окне.
+  function openMaterialReader(material) {
+    if (!material) {
+      return;
+    }
+    App.openModal({
+      title: material.title,
+      submitLabel: 'Закрыть',
+      body: '<div class="theory-content">' + renderTheoryText(material.content) + '</div>',
+      onSubmit: function () {
+        return Promise.resolve();
+      }
+    });
+  }
+
+  // Создаёт новый материал или редактирует существующий.
+  function openMaterialEditor(material) {
+    App.openModal({
+      title: material ? 'Редактирование материала' : 'Новый материал',
+      submitLabel: material ? 'Сохранить' : 'Добавить',
+      body:
+        '<div class="form-field">' +
+        '<label for="material-title">Заголовок</label>' +
+        '<input id="material-title" name="title" type="text" minlength="3" maxlength="150" required value="' +
+        App.escapeHtml(material ? material.title : '') + '">' +
+        '</div>' +
+        '<div class="form-field">' +
+        '<label for="material-content">Текст материала</label>' +
+        '<textarea id="material-content" name="content" rows="12" minlength="10" maxlength="20000" required>' +
+        App.escapeHtml(material ? material.content : '') + '</textarea>' +
+        '<p class="form-hint">Пустая строка разделяет абзацы. HTML-теги выводятся как текст.</p>' +
+        '</div>' +
+        '<div class="form-field">' +
+        '<label for="material-order">Порядок</label>' +
+        '<input id="material-order" name="sortOrder" type="number" min="0" max="1000" value="' +
+        (material ? material.sortOrder : state.materials.length + 1) + '">' +
+        '</div>',
+      onSubmit: async function (form) {
+        var values = App.formValues(form);
+        var payload = {
+          title: values.title.trim(),
+          content: values.content.trim(),
+          sortOrder: parseInt(values.sortOrder, 10) || 0
+        };
+
+        if (material) {
+          await App.api.materials.update(state.course.id, material.id, payload);
+          App.notify('Материал обновлён', 'success');
+        } else {
+          await App.api.materials.create(state.course.id, payload);
+          App.notify('Материал добавлен', 'success');
+        }
+
+        await loadMaterials();
+        renderTheory();
+      }
+    });
+  }
+
+  // Удаляет материал после подтверждения.
+  async function removeMaterial(material) {
+    if (!material) {
+      return;
+    }
+    if (!window.confirm('Удалить материал «' + material.title + '»?')) {
+      return;
+    }
+    try {
+      await App.api.materials.remove(state.course.id, material.id);
+      App.notify('Материал удалён', 'success');
+      await loadMaterials();
+      renderTheory();
+    } catch (error) {
+      App.notify(error.message, 'error');
+    }
+  }
+
+  // Загружает теорию курса.
+  async function loadMaterials() {
+    state.materials = await App.api.materials.list(state.course.id);
   }
 
   // Рисует задания курса.
@@ -238,6 +412,12 @@
     state.assignments = await App.api.assignments.list(id);
 
     try {
+      await loadMaterials();
+    } catch (error) {
+      state.materials = [];
+    }
+
+    try {
       var users = await App.api.users.lookup();
       App.cacheUsers(users);
     } catch (error) {
@@ -280,6 +460,7 @@
     document.getElementById('course-page-title').textContent = state.course.title;
 
     renderHero();
+    renderTheory();
     renderAssignments();
     renderTests();
     renderTeacher();
