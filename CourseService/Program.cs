@@ -188,5 +188,204 @@ using (var scope = app.Services.CreateScope())
 
         await db.SaveChangesAsync();
     }
+
+    // Демонстрационная теория. Добавляется отдельно от курсов, чтобы
+    // материалы появились и в уже существующей базе.
+    if (!await db.CourseMaterials.AnyAsync())
+    {
+        var csharpCourse = await db.Courses
+            .FirstOrDefaultAsync(course => course.Name == "Основы программирования на C#");
+        var webCourse = await db.Courses
+            .FirstOrDefaultAsync(course => course.Name == "Веб-разработка: HTML, CSS, JavaScript");
+
+        var materials = new List<CourseMaterial>();
+
+        if (csharpCourse != null)
+        {
+            materials.AddRange(new[]
+            {
+                new CourseMaterial
+                {
+                    CourseId = csharpCourse.CourseId,
+                    SortOrder = 1,
+                    Title = "Введение в .NET и C#",
+                    Content = """
+                        .NET — платформа для разработки приложений. Программа на C# компилируется в промежуточный язык IL, который выполняет CLR.
+
+                        Основные компоненты:
+                        • CLR — среда выполнения: управляет памятью, потоками и исключениями.
+                        • JIT-компилятор — превращает IL в машинный код при первом обращении к методу.
+                        • BCL — базовая библиотека классов .NET.
+
+                        Минимальная программа:
+                        using System;
+                        Console.WriteLine("Hello, world!");
+                        """,
+                    CreatedAt = DateTimeOffset.UtcNow
+                },
+                new CourseMaterial
+                {
+                    CourseId = csharpCourse.CourseId,
+                    SortOrder = 2,
+                    Title = "Типы данных и переменные",
+                    Content = """
+                        C# — статически типизированный язык: тип переменной известен на этапе компиляции.
+
+                        • int, long — целые числа.
+                        • double, decimal — числа с дробной частью (decimal — для денег).
+                        • bool — логическое значение true/false.
+                        • string — строка, ссылочный тип.
+                        • var — вывод типа компилятором, тип всё равно фиксируется.
+
+                        int count = 3;
+                        double price = 99.90;
+                        string name = "Анна";
+                        var total = count * price;
+                        """,
+                    CreatedAt = DateTimeOffset.UtcNow
+                },
+                new CourseMaterial
+                {
+                    CourseId = csharpCourse.CourseId,
+                    SortOrder = 3,
+                    Title = "Управляющие конструкции",
+                    Content = """
+                        Условия:
+                        if (score >= 60) { ... } else { ... }
+
+                        switch (role)
+                        {
+                            case "teacher": ...; break;
+                            default: ...; break;
+                        }
+
+                        Циклы:
+                        for (int i = 0; i < 5; i++) { ... }
+                        foreach (var item in items) { ... }
+                        while (condition) { ... }
+                        """,
+                    CreatedAt = DateTimeOffset.UtcNow
+                },
+                new CourseMaterial
+                {
+                    CourseId = csharpCourse.CourseId,
+                    SortOrder = 4,
+                    Title = "Основы ООП",
+                    Content = """
+                        Класс описывает состояние (поля) и поведение (методы) объекта.
+
+                        public class Student
+                        {
+                            public string Name { get; set; } = string.Empty;
+                            public int Score { get; private set; }
+
+                            public void AddScore(int points) => Score += points;
+                        }
+
+                        Инкапсуляция скрывает детали через модификаторы доступа: public, private, protected.
+                        Наследование позволяет вынести общее поведение в базовый класс, полиморфизм — работать с наследниками через общий тип.
+                        """,
+                    CreatedAt = DateTimeOffset.UtcNow
+                }
+            });
+        }
+
+        if (webCourse != null)
+        {
+            materials.AddRange(new[]
+            {
+                new CourseMaterial
+                {
+                    CourseId = webCourse.CourseId,
+                    SortOrder = 1,
+                    Title = "Как устроен веб",
+                    Content = """
+                        Браузер (клиент) отправляет HTTP-запрос на сервер и получает HTTP-ответ.
+
+                        • URL — адрес ресурса: схема, домен, путь, параметры.
+                        • Методы: GET — получить, POST — создать, PUT/PATCH — изменить, DELETE — удалить.
+                        • Коды ответа: 200 OK, 201 Created, 400 Bad Request, 401 Unauthorized, 404 Not Found, 500 Internal Server Error.
+
+                        Статический сайт отдаёт готовые HTML, CSS и JS; динамический — формирует ответ на сервере.
+                        """,
+                    CreatedAt = DateTimeOffset.UtcNow
+                },
+                new CourseMaterial
+                {
+                    CourseId = webCourse.CourseId,
+                    SortOrder = 2,
+                    Title = "HTML: структура страницы",
+                    Content = """
+                        HTML описывает смысл и структуру документа.
+
+                        <!DOCTYPE html>
+                        <html lang="ru">
+                        <head>
+                          <meta charset="UTF-8">
+                          <title>Страница</title>
+                        </head>
+                        <body>
+                          <header>...</header>
+                          <main>
+                            <h1>Заголовок</h1>
+                            <p>Абзац текста</p>
+                          </main>
+                        </body>
+                        </html>
+
+                        Семантические теги header, nav, main, section, article и footer помогают поисковым системам и экранным читалкам.
+                        """,
+                    CreatedAt = DateTimeOffset.UtcNow
+                },
+                new CourseMaterial
+                {
+                    CourseId = webCourse.CourseId,
+                    SortOrder = 3,
+                    Title = "CSS: оформление и адаптивность",
+                    Content = """
+                        CSS подключается через <link rel="stylesheet" href="style.css"> или тег <style>.
+
+                        • Селекторы: .class, #id, tag, [attribute].
+                        • Блочная модель: content + padding + border + margin.
+                        • Flexbox выстраивает элементы в ряд или колонку: display: flex; gap: 16px.
+                        • Медиазапросы адаптируют вёрстку:
+                        @media (max-width: 768px) { .columns { flex-direction: column; } }
+                        """,
+                    CreatedAt = DateTimeOffset.UtcNow
+                },
+                new CourseMaterial
+                {
+                    CourseId = webCourse.CourseId,
+                    SortOrder = 4,
+                    Title = "JavaScript и DOM",
+                    Content = """
+                        JavaScript делает страницу интерактивной.
+
+                        • let и const — переменные с блочной областью видимости.
+                        • Функции: function name() {} или const name = () => {}.
+                        • DOM — дерево элементов страницы. Поиск: document.querySelector('.card').
+                        • События: element.addEventListener('click', handler).
+
+                        Пример:
+                        const button = document.querySelector('#save');
+                        button.addEventListener('click', () => {
+                          document.querySelector('#status').textContent = 'Сохранено';
+                        });
+
+                        Запросы к серверу выполняются через fetch:
+                        const response = await fetch('/api/courses');
+                        const courses = await response.json();
+                        """,
+                    CreatedAt = DateTimeOffset.UtcNow
+                }
+            });
+        }
+
+        if (materials.Count > 0)
+        {
+            db.CourseMaterials.AddRange(materials);
+            await db.SaveChangesAsync();
+        }
+    }
 }
 app.Run();

@@ -80,6 +80,38 @@ namespace CourseService.Migrations
                     b.ToTable("Courses");
                 });
 
+            modelBuilder.Entity("CourseService.Models.CourseMaterial", b =>
+                {
+                    b.Property<int>("CourseMaterialId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("CourseMaterialId"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("CourseMaterialId");
+
+                    b.HasIndex("CourseId");
+
+                    b.ToTable("CourseMaterials");
+                });
+
             modelBuilder.Entity("CourseService.Models.Enrollment", b =>
                 {
                     b.Property<int>("EnrollmentId")
@@ -153,10 +185,21 @@ namespace CourseService.Migrations
                     b.Navigation("Course");
                 });
 
+            modelBuilder.Entity("CourseService.Models.CourseMaterial", b =>
+                {
+                    b.HasOne("CourseService.Models.Course", "Course")
+                        .WithMany("Materials")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+                });
+
             modelBuilder.Entity("CourseService.Models.Enrollment", b =>
                 {
                     b.HasOne("CourseService.Models.Course", "Course")
-                        .WithMany()
+                        .WithMany("Enrollments")
                         .HasForeignKey("CourseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -183,6 +226,10 @@ namespace CourseService.Migrations
             modelBuilder.Entity("CourseService.Models.Course", b =>
                 {
                     b.Navigation("Assignments");
+
+                    b.Navigation("Enrollments");
+
+                    b.Navigation("Materials");
                 });
 #pragma warning restore 612, 618
         }

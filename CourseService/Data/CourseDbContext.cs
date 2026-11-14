@@ -12,6 +12,7 @@ namespace CourseService.Data
         public DbSet<Assignment> Assignments { get; set; }
         public DbSet<Question> Questions { get; set; }
         public DbSet<Enrollment> Enrollments { get; set; }
+        public DbSet<CourseMaterial> CourseMaterials { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -38,6 +39,12 @@ namespace CourseService.Data
             modelBuilder.Entity<Enrollment>()
                 .HasIndex(enrollment => new { enrollment.StudentId, enrollment.CourseId })
                 .IsUnique();
+
+            modelBuilder.Entity<CourseMaterial>()
+                .HasOne(material => material.Course)
+                .WithMany(course => course.Materials)
+                .HasForeignKey(material => material.CourseId)
+                .OnDelete(DeleteBehavior.Cascade);
             
             modelBuilder.Entity<Question>()
                 .Property(question => question.TestCases)
