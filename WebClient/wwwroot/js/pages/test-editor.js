@@ -313,26 +313,18 @@
       return;
     }
 
-    var defaultCourseId = state.selected
-      ? String(state.selected.courseId)
-      : String(courses[0].id);
+    // Курс не выбирается вручную: тест создаётся в курсе открытого теста,
+    // а если тест ещё не открыт — в первом курсе преподавателя.
+    var defaultCourse = state.selected
+      ? courses.filter(function (course) {
+          return String(course.id) === String(state.selected.courseId);
+        })[0] || courses[0]
+      : courses[0];
 
     App.openModal({
-      title: 'Новый тест',
+      title: 'Новый тест — ' + defaultCourse.title,
       submitLabel: 'Создать тест',
       body:
-        '<div class="form-field">' +
-        '<label>Курс</label>' +
-        '<div class="options-list">' +
-        courses.map(function (course) {
-          return '<label class="option-row">' +
-            '<input type="radio" name="courseId" value="' + course.id + '"' +
-            (String(course.id) === defaultCourseId ? ' checked' : '') + '>' +
-            '<span>' + App.escapeHtml(course.title) + '</span>' +
-            '</label>';
-        }).join('') +
-        '</div>' +
-        '</div>' +
         '<div class="form-field">' +
         '<label for="new-test-name">Название</label>' +
         '<input id="new-test-name" name="name" type="text" minlength="3" maxlength="100" required>' +
@@ -351,7 +343,7 @@
         '</div>',
       onSubmit: async function (form) {
         var values = App.formValues(form);
-        var created = await App.api.assignments.create(values.courseId, {
+        var created = await App.api.assignments.create(defaultCourse.id, {
           name: values.name.trim(),
           description: values.description.trim(),
           maxScore: Number(values.maxScore),
