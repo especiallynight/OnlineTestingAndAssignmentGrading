@@ -131,7 +131,8 @@ flowchart TD
 
 ## 4. Описание сервисов
 
-![API контракты](api-contracts.md
+
+[API-контракты](api-contracts.md)
 
 
 ## 5. Модель данных
