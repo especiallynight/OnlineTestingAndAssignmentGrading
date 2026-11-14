@@ -38,25 +38,12 @@
     }).join('');
   }
 
-  function fillCourseSelect() {
-    var select = document.getElementById('test-course-input');
-    if (!select) {
-      return;
-    }
-    select.innerHTML = state.courses.map(function (course) {
-      return '<option value="' + course.id + '">' +
-        App.escapeHtml(course.title) + '</option>';
-    }).join('');
-    select.disabled = true;
-  }
-
   function renderSettings() {
     var assignment = state.selected;
     if (!assignment) {
       return;
     }
     document.getElementById('test-title-input').value = assignment.title;
-    document.getElementById('test-course-input').value = assignment.courseId;
     document.getElementById('test-duration-input').value = assignment.timeLimitMinutes;
     document.getElementById('test-max-score-input').value = assignment.maxScore;
     document.getElementById('test-description-input').value = assignment.description;
@@ -326,6 +313,10 @@
       return;
     }
 
+    var defaultCourseId = state.selected
+      ? String(state.selected.courseId)
+      : String(courses[0].id);
+
     App.openModal({
       title: 'Новый тест',
       submitLabel: 'Создать тест',
@@ -333,10 +324,10 @@
         '<div class="form-field">' +
         '<label>Курс</label>' +
         '<div class="options-list">' +
-        courses.map(function (course, index) {
+        courses.map(function (course) {
           return '<label class="option-row">' +
             '<input type="radio" name="courseId" value="' + course.id + '"' +
-            (index === 0 ? ' checked' : '') + '>' +
+            (String(course.id) === defaultCourseId ? ' checked' : '') + '>' +
             '<span>' + App.escapeHtml(course.title) + '</span>' +
             '</label>';
         }).join('') +
@@ -429,7 +420,6 @@
 
     try {
       state.courses = await App.api.courses.list();
-      fillCourseSelect();
       await loadAssignments();
 
       if (!state.assignments.length) {
