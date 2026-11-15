@@ -110,9 +110,10 @@ public class TestSubmittedConsumer : IConsumer<TestSubmittedEvent>
 
             if (!response.IsSuccessStatusCode)
             {
-
+                // Вопрос мог быть удалён из курса. Такой ответ просто
+                // не учитываем, остальные проверяем как обычно.
                 if (response.StatusCode ==
-                    System.Net.HttpStatusCode.BadRequest)
+                    System.Net.HttpStatusCode.NotFound)
                 {
                     continue;
                 }

@@ -412,6 +412,30 @@
       }
       await waitForPendingSaves();
 
+      // Перед завершением перепроверяем код: балл за вопрос на код
+      // передаётся в GradingService из сохранённого ответа, поэтому
+      // проверка должна пройти даже если студент не нажимал
+      // «Проверить код» вручную.
+      for (var j = 0; j < state.questions.length; j++) {
+        var codeQuestion = state.questions[j];
+        var codeEntry = state.answers[codeQuestion.id];
+
+        if (codeQuestion.type !== 'code' ||
+            !codeEntry ||
+            !codeEntry.answerId ||
+            !String(codeEntry.saved || '').trim()) {
+          continue;
+        }
+
+        try {
+          await App.api.attempts.submitCodeAnswer(codeEntry.answerId);
+        } catch (error) {
+          // Ошибка проверки не должна блокировать сдачу работы:
+          // балл за этот вопрос останется нулевым.
+          App.notify('Не удалось проверить код: ' + error.message, 'error');
+        }
+      }
+
       try {
         await App.api.attempts.stop(state.attempt.id);
       } catch (error) {

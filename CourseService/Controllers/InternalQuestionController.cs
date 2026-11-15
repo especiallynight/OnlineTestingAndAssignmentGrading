@@ -119,7 +119,16 @@ namespace CourseService.Controllers
             if (question.QuestionType != "SingleChoice" &&
                 question.QuestionType != "MultipleChoice")
             {
-                return BadRequest("Вопрос не является вопросом с выбором ответа");
+                // У вопроса на код нет эталонного ответа: его проверяет
+                // CodeExecutionService, а балл передаётся в GradingService
+                // вместе с ответом студента. Возвращаем тип вопроса и null,
+                // чтобы GradingService не пропускал такие ответы.
+                return Ok(new
+                {
+                    question_id = question.QuestionId,
+                    question_type = question.QuestionType,
+                    correct_answer = (object?)null
+                });
             }
 
             if (question.CorrectAnswer == null)
