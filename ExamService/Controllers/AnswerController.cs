@@ -103,7 +103,7 @@ namespace ExamService.Controllers
                 return Conflict("Попытка не активна");
 
             if (attempt.DeadlineAt != null &&
-                DateTimeOffset.UtcNow > attempt.DeadlineAt.Value)
+                DateTimeOffset.UtcNow >= attempt.DeadlineAt.Value)
                 return Conflict("Время попытки истекло");
 
             var existingAnswer = await _context.Answers

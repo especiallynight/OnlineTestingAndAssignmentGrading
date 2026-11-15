@@ -205,7 +205,7 @@ namespace ExamService.Controllers
             if (attempt.Status != ExamAttemptStatus.InProgress)
                 return Conflict(new { message = "Попытка уже завершена. Повторное прохождение невозможно." });
 
-            if (attempt.DeadlineAt != null && DateTimeOffset.UtcNow > attempt.DeadlineAt.Value)
+            if (attempt.DeadlineAt != null && DateTimeOffset.UtcNow >= attempt.DeadlineAt.Value)
             {
                 attempt.Status = ExamAttemptStatus.Expired;
                 await _context.SaveChangesAsync();
@@ -238,7 +238,7 @@ namespace ExamService.Controllers
             if (attempt.Status != ExamAttemptStatus.InProgress || attempt.StartedAt == null)
                 return Conflict(new { message = "Попытку нельзя завершить, она уже завершена или не начата." });
 
-            if (attempt.DeadlineAt != null && DateTimeOffset.UtcNow > attempt.DeadlineAt.Value)
+            if (attempt.DeadlineAt != null && DateTimeOffset.UtcNow >= attempt.DeadlineAt.Value)
             {
                 attempt.Status = ExamAttemptStatus.Expired;
             }
