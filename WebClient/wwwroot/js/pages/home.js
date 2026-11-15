@@ -14,7 +14,8 @@
     courses: [],
     assignments: [],
     attempts: [],
-    grades: {}
+    grades: {},
+    teacherApplication: null
   };
 
   function percent(score, maxScore) {
@@ -96,6 +97,98 @@
     }
   }
 
+  // Статус заявки приходит числом (0 — Pending, 1 — Approved,
+  // 2 — Rejected) или строкой, если на бэкенде включён StringEnumConverter.
+  function applicationStatus(application) {
+    if (!application) {
+      return null;
+    }
+
+    var status = application.status;
+
+    if (status === 0 || status === '0' || status === 'Pending') {
+      return 'pending';
+    }
+    if (status === 1 || status === '1' || status === 'Approved') {
+      return 'approved';
+    }
+    if (status === 2 || status === '2' || status === 'Rejected') {
+      return 'rejected';
+    }
+    return null;
+  }
+
+  // Блок заявки на роль преподавателя на дашборде студента.
+  function renderTeacherApplication() {
+    var host = document.getElementById('dashboard-teacher-application');
+    if (!host) {
+      return;
+    }
+
+    var status = applicationStatus(state.teacherApplication);
+
+    if (status === 'pending') {
+      host.innerHTML =
+        '<section class="card dashboard-application">' +
+        '<div class="flex-between">' +
+        '<div>' +
+        '<h2 class="section-title">Заявка на преподавателя</h2>' +
+        '<p class="muted">Заявка отправлена и ожидает рассмотрения администратором.</p>' +
+        '</div>' +
+        App.renderBadge('pending') +
+        '</div>' +
+        '</section>';
+      return;
+    }
+
+    if (status === 'approved') {
+      host.innerHTML =
+        '<section class="card dashboard-application">' +
+        '<h2 class="section-title">Заявка на преподавателя</h2>' +
+        '<p class="muted">Заявка одобрена. Войдите заново, чтобы получить роль преподавателя.</p>' +
+        '</section>';
+      return;
+    }
+
+    host.innerHTML =
+      '<section class="card dashboard-application">' +
+      '<div class="flex-between">' +
+      '<div>' +
+      '<h2 class="section-title">Стать преподавателем</h2>' +
+      '<p class="muted">Подайте заявку — администратор рассмотрит её и выдаст роль преподавателя.</p>' +
+      (status === 'rejected'
+        ? '<p class="alert alert-error">Предыдущая заявка отклонена. Можно подать новую.</p>'
+        : '') +
+      '</div>' +
+      '<button class="btn btn-primary" type="button" id="apply-teacher">Подать заявку</button>' +
+      '</div>' +
+      '</section>';
+
+    var button = document.getElementById('apply-teacher');
+    if (button) {
+      button.addEventListener('click', function () {
+        submitTeacherApplication(button);
+      });
+    }
+  }
+
+  async function submitTeacherApplication(button) {
+    button.disabled = true;
+    button.textContent = 'Отправляем…';
+
+    try {
+      await App.api.auth.applyForTeacher();
+      App.notify('Заявка на преподавателя отправлена', 'success');
+      state.teacherApplication = await App.api.auth.myTeacherApplication()
+        .catch(function () { return null; });
+      renderTeacherApplication();
+    } catch (error) {
+      App.notify(error.message, 'error');
+      button.disabled = false;
+      button.textContent = 'Подать заявку';
+    }
+  }
+
   function renderStudent() {
     var assignments = myAssignments();
     var graded = state.attempts.filter(function (attempt) {
@@ -112,6 +205,8 @@
     document.getElementById('dashboard-main-title').textContent = 'Мои курсы';
     document.getElementById('dashboard-main-note').textContent =
       'Откройте курс, чтобы пройти задания';
+
+    renderTeacherApplication();
 
     App.renderTable('dashboard-main-table', [
       {
@@ -347,6 +442,11 @@
     }
 
     await loadGrades(state.attempts);
+
+    if (state.role === 'student') {
+      state.teacherApplication = await App.api.auth.myTeacherApplication()
+        .catch(function () { return null; });
+    }
 
     renderHeading();
     if (state.role === 'student') {

@@ -100,6 +100,31 @@ namespace IdentityService.Controllers
         }
 
 
+        [HttpGet("teacher-application")]
+        [Authorize]
+        public async Task<ActionResult> GetMyTeacherApplication()
+        {
+            var user_id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (user_id == null || !int.TryParse(user_id, out var id))
+                return Unauthorized();
+
+            var application = await _context.TeacherApplications
+                .Where(a => a.UserId == id)
+                .OrderByDescending(a => a.CreatedAt)
+                .Select(a => new
+                {
+                    a.TeacherApplicationId,
+                    a.Status,
+                    a.CreatedAt,
+                    a.ReviewedAt
+                })
+                .FirstOrDefaultAsync();
+
+            return Ok(application);
+        }
+
+
         [HttpPost("login")]
         [AllowAnonymous]
         public async Task<ActionResult<AuthResponseDTO>> Login(LoginDTO dto)

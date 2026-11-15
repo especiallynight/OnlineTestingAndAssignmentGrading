@@ -651,6 +651,12 @@
             renderCourseTestEditor();
             renderAssignments();
             renderTests();
+
+            // Редактор находится ниже списка заданий, поэтому прокручиваем
+            // к нему: иначе клик по «Редактировать» выглядит как бездействие.
+            if (editor) {
+                editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         } catch (error) {
             App.notify(error.message, 'error');
         }
@@ -689,7 +695,7 @@
         }
 
         editor.hidden = false;
-        title.textContent = 'Редактор теста: ' + state.selectedTest.title;
+        title.textContent = 'Редактор задания: ' + state.selectedTest.title;
 
         settings.innerHTML =
             '<form id="course-test-settings-form">' +
@@ -723,7 +729,7 @@
 
         if (!state.questions.length) {
             questions.innerHTML =
-                '<div class="empty-state"><p class="muted">В этом тесте пока нет вопросов.</p></div>';
+                '<div class="empty-state"><p class="muted">В этом задании пока нет вопросов.</p></div>';
         } else {
             questions.innerHTML = state.questions.map(function (question, index) {
                 var answerHtml = '';

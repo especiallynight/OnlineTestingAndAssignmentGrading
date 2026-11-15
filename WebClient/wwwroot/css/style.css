@@ -369,6 +369,14 @@ main {
   gap: 16px;
 }
 
+.dashboard-application {
+  margin-top: 20px;
+}
+
+.dashboard-application .alert {
+  margin-top: 12px;
+}
+
 .two-column {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);

@@ -550,6 +550,13 @@ window.App = (function () {
           // Выход должен работать даже при недоступном сервисе.
         }
         clearSession();
+      },
+      // Заявка студента на роль преподавателя.
+      applyForTeacher: function () {
+        return request('/api/auth/teacher-application', { method: 'POST' });
+      },
+      myTeacherApplication: function () {
+        return request('/api/auth/teacher-application');
       }
     },
 
