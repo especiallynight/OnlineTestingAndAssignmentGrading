@@ -60,72 +60,71 @@
 
 
 ```mermaid
-flowchart TD
-    Student[Студент]
-    Teacher[Преподаватель]
+flowchart LR
+    Student([Студент])
+    Teacher([Преподаватель])
+    Admin([Администратор])
 
-    Client[Веб-клиент]
-    Gateway[API Gateway]
-    SignalR[SignalR Hub]
+    Client["Веб-клиент<br/>HTML/CSS/JS"]
+    Gateway["API Gateway"]
+    Hub["SignalR Hub<br/>/gradingHub"]
 
     Student --> Client
     Teacher --> Client
-    Client --> Gateway
-    Client <--> SignalR
+    Admin --> Client
 
-    CourseSvc[Сервис курсов и заданий]
-    ExamSvc[Сервис прохождения тестов]
-    GradeSvc[Сервис проверки и оценивания]
-    AnalSvc[Сервис аналитики]
-    IdentitySvc[Сервис идентификации]
+    Client -->|"HTTP + JWT"| Gateway
+    Client -.->|"WebSocket"| Hub
+
+    CourseSvc["CourseService<br/>курсы, теория, задания, вопросы"]
+    ExamSvc["ExamService<br/>попытки, ответы, таймер"]
+    GradeSvc["GradingService<br/>автопроверка и оценки"]
+    AnalSvc["AnalyticsService<br/>статистика"]
+    IdentitySvc["IdentityService<br/>пользователи и JWT"]
 
     Gateway --> CourseSvc
     Gateway --> ExamSvc
+    Gateway --> GradeSvc
     Gateway --> AnalSvc
     Gateway --> IdentitySvc
 
-    DBCourse[(БД курсов)]
-    DBExam[(БД тестов)]
-    DBGrade[(БД проверки и оценивания)]
-    DBAnal[(БД аналитики)]
-    DBIdentity[(БД идентификации)]
+    CourseDb[("CourseDB")]
+    ExamDb[("ExamDB<br/>+ OutboxMessage / OutboxState")]
+    GradeDb[("GradeDB<br/>+ OutboxMessage / OutboxState / InboxState")]
+    AnalDb[("AnalyticsDB")]
+    IdentityDb[("IdentityDB")]
 
-    CourseSvc --> DBCourse
-    ExamSvc --> DBExam
-    GradeSvc --> DBGrade
-    AnalSvc --> DBAnal
-    IdentitySvc --> DBIdentity
+    CourseSvc --> CourseDb
+    ExamSvc --> ExamDb
+    GradeSvc --> GradeDb
+    AnalSvc --> AnalDb
+    IdentitySvc --> IdentityDb
 
-    OutboxExam[(Таблица OutboxMessages)]
-    DBExam --- OutboxExam
+    Redis[("Redis")]
+    CourseSvc <-->|"кэш курсов и вопросов"| Redis
+    AnalSvc <-->|"кэш аналитики"| Redis
 
-    OutboxGrade[(Таблица OutboxMessages)]
-    DBGrade --- OutboxGrade
+    ExamSvc -->|"internal API"| CourseSvc
+    GradeSvc -->|"internal API"| CourseSvc
 
-    ExamSvc --> OutboxExam
-    OutboxExam --> WorkerExam[Обработчик Outbox ExamService]
-    WorkerExam -->|TestSubmittedEvent| RMQ
+    CodeExec["CodeExecutionService<br/>изолированный запуск кода"]
+    ExamSvc -->|"HTTP + X-Internal-Api-Key<br/>при проверке кода"| CodeExec
 
-    GradeSvc --> OutboxGrade
-    OutboxGrade --> WorkerGrade[Обработчик Outbox GradingService]
-    WorkerGrade -->|GradingCompleted / GradingFailed| RMQ
+    MQ{{"RabbitMQ"}}
 
-    RMQ((RabbitMQ))
-    RMQ -->|TestSubmittedEvent| GradeSvc
-    RMQ -->|GradingCompleted / GradingFailed| ExamSvc
-    RMQ -->|GradingCompleted| AnalSvc
+    ExamSvc -->|"TestSubmittedEvent<br/>через Outbox"| MQ
+    MQ -->|"TestSubmittedEvent"| GradeSvc
+    GradeSvc -->|"AttemptGradedEvent<br/>через Outbox"| MQ
+    MQ -->|"AttemptGradedEvent"| AnalSvc
 
-    Redis[(Redis кэш)]
-    CourseSvc <--> Redis
+    AnalSvc -->|"ReceiveGradeUpdate"| Hub
 
-    RedisAnal[(Redis кэш аналитики)]
-    AnalSvc <--> RedisAnal
-
-    CodeExec[Сервис проверки кода]
-    GradeSvc -->|HTTP, X-Internal-Api-Key| CodeExec
-    CodeExec --> GradeSvc
-
-    ExamSvc -->|Уведомление о результате| SignalR
+    classDef external fill:#eef2ff,stroke:#6366f1,color:#1e1b4b;
+    classDef store fill:#ecfdf5,stroke:#10b981,color:#064e3b;
+    classDef bus fill:#fff7ed,stroke:#f97316,color:#7c2d12;
+    class Student,Teacher,Admin external;
+    class CourseDb,ExamDb,GradeDb,AnalDb,IdentityDb,Redis store;
+    class MQ bus;
 ```
 
 
@@ -169,64 +168,68 @@ IdentityService - регистрация, вход и получение дан�
 
 1\. ExamService сохраняет ответы и информацию об отправке теста в ExamDB.
 
-2\. Событие TestSubmittedEvent записывается в таблицу OutboxMessages.
+2\. Событие TestSubmittedEvent записывается в таблицу `OutboxMessage` (встроенный Outbox MassTransit) в той же транзакции, что и изменение попытки.
 
-3\. Фоновый обработчик отправляет событие в RabbitMQ.
+3\. Фоновый обработчик MassTransit отправляет событие из Outbox в RabbitMQ.
 
 4\. GradingService получает событие, проверяет ответы и сохраняет результат в GradeDB.
 
-5\. GradingService публикует событие GradingCompleted или GradingFailed через свой Outbox.
+5\. GradingService публикует событие AttemptGradedEvent через свой Outbox.
 
-6\. ExamService обновляет статус попытки, а AnalyticsService использует полученный результат для обновления статистики.
+6\. AnalyticsService получает AttemptGradedEvent, обновляет статистику и отправляет уведомление через SignalR Hub.
 
-7\. После завершения проверки клиент может получить уведомление через SignalR Hub.
+7\. Клиент может получить оценку запросом `GET /api/grades/attempt/{attemptId}`.
 
 
 
 ```mermaid
-
 sequenceDiagram
+    autonumber
+    actor Student as Студент
+    participant Client as Веб-клиент
+    participant Exam as ExamService
+    participant ExamDb as ExamDB (Outbox)
+    participant Course as CourseService
+    participant Code as CodeExecutionService
+    participant MQ as RabbitMQ
+    participant Grade as GradingService
+    participant GradeDb as GradeDB (Outbox)
+    participant Anal as AnalyticsService
+    participant Hub as SignalR Hub
 
-&#x20;   actor Student as Студент
+    Note over Student,Code: Проверка кода во время попытки (по кнопке «Проверить код»)
+    Student->>Client: Написать и проверить код
+    Client->>Exam: POST /api/answers/{answerId}/submit
+    Exam->>Course: GET /internal/questions/{questionId}/test-cases
+    Course-->>Exam: Скрытые тест-кейсы
+    Exam->>Code: POST /api/code-execution/run
+    Code-->>Exam: Вердикт, passedTests, score
+    Exam->>ExamDb: Сохранить результат проверки ответа
+    Exam-->>Client: Вердикт и число пройденных тестов
 
-&#x20;   participant Client as Веб-клиент
+    Note over Student,Hub: Завершение попытки и асинхронная проверка
+    Student->>Client: Завершить тест
+    Client->>Exam: PUT /api/exam_attempts/{attemptId}/stop
+    Exam->>ExamDb: Статус Completed + ответы
+    Exam->>ExamDb: TestSubmittedEvent в Outbox
+    Exam-->>Client: 200 OK, попытка завершена
 
-&#x20;   participant Exam as ExamService
+    ExamDb-->>MQ: Публикация TestSubmittedEvent
+    MQ->>Grade: TestSubmittedEvent
+    Grade->>Course: GET /internal/assignments/{assignmentId}
+    Grade->>Course: GET /internal/questions/{questionId}/correct-answer
+    Course-->>Grade: Правильные ответы и типы вопросов
+    Grade->>Grade: Рассчитать итоговый балл
+    Grade->>GradeDb: AttemptGrade + AttemptGradedEvent в Outbox
+    GradeDb-->>MQ: Публикация AttemptGradedEvent
 
-&#x20;   participant MQ as RabbitMQ
+    MQ->>Anal: AttemptGradedEvent
+    Anal->>Anal: Обновить статистику и сбросить кэш
+    Anal->>Hub: ReceiveGradeUpdate(attemptId, score)
+    Hub-->>Client: Результат готов
 
-&#x20;   participant Grade as GradingService
-
-&#x20;   participant SignalR as SignalR Hub
-
-
-
-&#x20;   Student->>Client: Отправить тест
-
-&#x20;   Client->>Exam: Передать ответы
-
-&#x20;   Exam->>Exam: Сохранить ответы
-
-&#x20;   Exam-->>Client: Тест принят
-
-
-
-&#x20;   Exam->>MQ: TestSubmittedEvent
-
-&#x20;   MQ->>Grade: Передать тест
-
-&#x20;   Grade->>Grade: Проверить ответы
-
-&#x20;   Grade->>MQ: GradingCompleted
-
-&#x20;   MQ->>Exam: Передать результат
-
-&#x20;   Exam->>Exam: Обновить статус попытки
-
-&#x20;   Exam->>SignalR: Уведомить о готовности результата
-
-&#x20;   SignalR-->>Client: Результат готов
-
+    Client->>Grade: GET /api/grades/attempt/{attemptId}
+    Grade-->>Client: Оценка и feedback
 ```
 
 ## 7. Безопасность
@@ -287,6 +290,7 @@ sequenceDiagram
 | 6. Выполнять код студентов в отдельном CodeExecutionService | Запускать код внутри процесса GradingService | Отдельный сервис изолирует недоверенный код, позволяет ограничить CPU, память, число процессов и время выполнения, а также не роняет основной процесс проверки |
 | 7. Использовать ProcessCodeRunner внутри контейнера в Docker-стеке | Требовать Docker-демон внутри контейнера (Docker-in-Docker) | Docker-сокет не пробрасывается в контейнер, поэтому сборка и запуск выполняются внутри самого контейнера CodeExecutionService с ограничениями ресурсов; на хосте остаётся DockerCodeRunner |
 | 8. Кэшировать курсы, вопросы и аналитику в Redis | Каждый раз читать данные из PostgreSQL | Кэш снижает нагрузку на БД и ускоряет страницы курсов и аналитики; инвалидация выполняется при изменении данных |
+| 9. Использовать встроенный Outbox MassTransit (`OutboxMessage`, `OutboxState`, `InboxState`) | Вести собственную таблицу `OutboxGrades` и вручную публиковать события | Встроенный Outbox уже гарантирует атомарность «сохранить данные + поставить событие в очередь», поддерживает повторную доставку и не требует собственного фонового обработчика; legacy-модель `OutboxGrade` удалена |
 
 
 
