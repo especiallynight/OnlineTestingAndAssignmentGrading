@@ -324,7 +324,7 @@
     } else {
       var courses = await App.api.courses.list();
       state.courses = state.role === 'teacher'
-        ? courses.filter(function (course) { return course.teacherId === state.user.id; })
+        ? courses.filter(function (course) { return App.sameId(course.teacherId, state.user.id); })
         : courses;
     }
 

@@ -28,7 +28,7 @@ public class AttemptGradedConsumer : IConsumer<AttemptGradedEvent>
     public async Task Consume(ConsumeContext<AttemptGradedEvent> context)
     {
         var msg = context.Message;
-        var scorePercent = msg.MaxScore > 0 ? (msg.Score / msg.MaxScore) * 100 : 0;
+        var scorePercent = msg.MaxScore > 0 ? (decimal)msg.Score / msg.MaxScore * 100m : 0m;
 
         var stats = await _context.StudentStatistics
             .FirstOrDefaultAsync(s => s.StudentId == msg.StudentId && s.CourseId == msg.CourseId);

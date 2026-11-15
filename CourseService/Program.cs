@@ -91,13 +91,28 @@ using (var scope = app.Services.CreateScope())
     var db = scope.ServiceProvider.GetRequiredService<CourseDbContext>();
     await db.Database.MigrateAsync();
 
+    static JsonElement Json(string raw) =>
+        JsonDocument.Parse(raw).RootElement.Clone();
+
+    const string sumQuestionText =
+        "Напишите программу на C#: прочитайте два целых числа из стандартного ввода " +
+        "и выведите их сумму. Числа могут быть отрицательными. " +
+        "Пример: при вводе «1 2» программа должна вывести «3».";
+
+    const string sumTestCasesJson = """
+        [
+          {"input":"1 2","expectedOutput":"3"},
+          {"input":"-5 8","expectedOutput":"3"},
+          {"input":"0 0","expectedOutput":"0"},
+          {"input":"10 -10","expectedOutput":"0"},
+          {"input":"1000000 2000000","expectedOutput":"3000000"}
+        ]
+        """;
+
     if (!await db.Courses.AnyAsync())
     {
         var demoTeacherId = builder.Configuration.GetValue("Demo:TeacherId", 2);
         var demoStudentId = builder.Configuration.GetValue("Demo:StudentId", 3);
-
-        static JsonElement Json(string raw) =>
-            JsonDocument.Parse(raw).RootElement.Clone();
 
         var csharpCourse = new Course
         {
@@ -157,10 +172,10 @@ using (var scope = app.Services.CreateScope())
             new Question
             {
                 Assignment = csharpTest,
-                QuestionText = "Напишите метод Sum для двух чисел",
+                QuestionText = sumQuestionText,
                 QuestionType = "Code",
                 QuestionOptions = Json("{}"),
-                TestCases = Json("""[{"input":"1 2","expectedOutput":"3"}]""")
+                TestCases = Json(sumTestCasesJson)
             },
             new Question
             {
@@ -184,6 +199,59 @@ using (var scope = app.Services.CreateScope())
             Course = csharpCourse,
             StudentId = demoStudentId,
             EnrolledAt = DateTimeOffset.UtcNow
+        });
+
+        await db.SaveChangesAsync();
+    }
+
+    // Обновляем демонстрационную задачу Sum и в уже существующей базе:
+    // добавляем примеры и несколько тестов, чтобы решение нельзя было
+    // захардкодить под один набор входных данных.
+    var sumQuestion = await db.Questions
+        .Include(question => question.Assignment)
+        .FirstOrDefaultAsync(question =>
+            question.QuestionType == "Code" &&
+            question.Assignment.Name == "Вводный тест по C#");
+
+    if (sumQuestion != null)
+    {
+        var currentTests = sumQuestion.TestCases?.GetRawText() ?? string.Empty;
+
+        if (!currentTests.Contains("-5 8"))
+        {
+            sumQuestion.QuestionText = sumQuestionText;
+            sumQuestion.TestCases = Json(sumTestCasesJson);
+            await db.SaveChangesAsync();
+        }
+    }
+
+    // Отдельное демонстрационное задание на код. Все его вопросы имеют тип
+    // Code, поэтому в карточке курса оно попадает в раздел «Задания на код».
+    var csharpCourseForCode = await db.Courses
+        .FirstOrDefaultAsync(course => course.Name == "Основы программирования на C#");
+
+    if (csharpCourseForCode != null &&
+        !await db.Assignments.AnyAsync(assignment =>
+            assignment.CourseId == csharpCourseForCode.CourseId &&
+            assignment.Name == "Задание: сумма двух чисел"))
+    {
+        var codeAssignment = new Assignment
+        {
+            CourseId = csharpCourseForCode.CourseId,
+            Name = "Задание: сумма двух чисел",
+            Description = "Прочитайте два целых числа и выведите их сумму.",
+            MaxScore = 10,
+            TimeLimitMinutes = 30
+        };
+
+        db.Assignments.Add(codeAssignment);
+        db.Questions.Add(new Question
+        {
+            Assignment = codeAssignment,
+            QuestionText = sumQuestionText,
+            QuestionType = "Code",
+            QuestionOptions = Json("{}"),
+            TestCases = Json(sumTestCasesJson)
         });
 
         await db.SaveChangesAsync();

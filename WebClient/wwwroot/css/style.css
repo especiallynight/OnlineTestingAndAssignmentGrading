@@ -1469,6 +1469,47 @@ main {
   overflow-x: auto;
 }
 
+.code-examples {
+  margin-top: 14px;
+}
+
+.code-example {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.code-example .code-block {
+  margin-top: 4px;
+  min-height: 38px;
+}
+
+.test-case-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.test-case-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.test-case-row input {
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .code-example,
+  .test-case-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .data-table select {
   padding: 6px 8px;
   border: 1px solid var(--color-border);

@@ -41,7 +41,17 @@ window.App = (function () {
     }
   }
 
+  // Сравнивает идентификаторы без учёта типа: API и localStorage могут
+  // вернуть число или строку, а строгое === в этом случае ломает фильтры.
+  function sameId(first, second) {
+    return first !== null && first !== undefined &&
+      second !== null && second !== undefined &&
+      String(first) === String(second);
+  }
+
   // Возвращает объект текущего пользователя, сохранённый при входе.
+  // Старые версии клиента могли сохранить id строкой или только userId,
+  // поэтому объект приводится к единому виду.
   function getUser() {
     var raw = localStorage.getItem(USER_KEY);
     if (!raw) {
@@ -49,7 +59,24 @@ window.App = (function () {
     }
     try {
       var parsed = JSON.parse(raw);
-      return parsed && parsed.id ? parsed : null;
+      if (!parsed) {
+        return null;
+      }
+      var id = parsed.id !== null && parsed.id !== undefined
+        ? parsed.id
+        : parsed.userId;
+      if (id === null || id === undefined || id === '') {
+        return null;
+      }
+      return {
+        id: Number(id),
+        userId: Number(id),
+        email: parsed.email || '',
+        firstName: parsed.firstName || '',
+        lastName: parsed.lastName || '',
+        fullName: parsed.fullName || userFullName(parsed),
+        role: roleFromNumber(parsed.role)
+      };
     } catch (error) {
       return null;
     }
@@ -279,6 +306,19 @@ window.App = (function () {
     }[value] || 'saved';
   }
 
+  // Приводит длинные вердикты CodeExecutionService к коротким кодам,
+  // которые используются в бейджах, фильтрах и статистике.
+  function verdictFromApi(value) {
+    return {
+      Accepted: 'OK',
+      WrongAnswer: 'WA',
+      TimeLimitExceeded: 'TLE',
+      CompilationError: 'CE',
+      CompilationTimeout: 'CE',
+      RuntimeError: 'RE'
+    }[value] || value || '';
+  }
+
   function userFullName(user) {
     if (!user) {
       return '—';
@@ -384,6 +424,7 @@ window.App = (function () {
       options: options,
       correctKeys: correctKeys,
       testCases: question.test_cases || [],
+      examples: question.examples || [],
       points: 1
     };
   }
@@ -833,7 +874,7 @@ window.App = (function () {
   function badgeClass(status) {
     var success = ['OK', 'checked', 'graded', 'active', 'published', 'completed', 'grade-5', 'grade-4'];
     var warning = ['WA', 'pending', 'draft', 'grade-3', 'in-progress'];
-    var danger = ['TLE', 'blocked', 'grade-2', 'expired'];
+    var danger = ['TLE', 'RE', 'blocked', 'grade-2', 'expired'];
     var info = ['CE', 'submitted', 'saved'];
 
     if (success.indexOf(status) !== -1) {
@@ -857,6 +898,7 @@ window.App = (function () {
       WA: 'WA — неверный ответ',
       TLE: 'TLE — превышено время',
       CE: 'CE — ошибка компиляции',
+      RE: 'RE — ошибка выполнения',
       checked: 'Проверено',
       pending: 'На проверке',
       submitted: 'Отправлено',
@@ -1072,6 +1114,7 @@ window.App = (function () {
     setRole: setRole,
     getUser: getUser,
     setUser: setUser,
+    sameId: sameId,
     clearSession: clearSession,
     url: url,
     requireRole: requireRole,
@@ -1096,6 +1139,7 @@ window.App = (function () {
     questionTypeToApi: questionTypeToApi,
     attemptStatusFromApi: attemptStatusFromApi,
     answerStatusFromApi: answerStatusFromApi,
+    verdictFromApi: verdictFromApi,
     optionEntries: optionEntries,
     normalizeUser: normalizeUser,
     normalizeCourse: normalizeCourse,

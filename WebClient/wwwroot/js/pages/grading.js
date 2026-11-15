@@ -161,17 +161,27 @@
           return '<article class="question-card">' +
             '<div class="flex-between">' +
             '<span class="question-type">Вопрос ' + (index + 1) + ' · ' + App.escapeHtml(question.apiType) + '</span>' +
-            (answer ? App.renderBadge(answer.executionStatus || answer.status) : App.renderBadge('not-submitted')) +
+            (answer
+              ? App.renderBadge(question.type === 'code'
+                  ? App.verdictFromApi(answer.executionStatus || answer.status)
+                  : answer.status)
+              : App.renderBadge('not-submitted')) +
             '</div>' +
             '<p class="question-text">' + App.escapeHtml(question.text) + '</p>' +
-            '<p class="muted small">Ответ студента: ' + formatAnswer(answer) + '</p>' +
+            (question.type === 'code'
+              ? '<p class="muted small">Ответ студента:</p>' +
+                (answer && answer.data
+                  ? '<pre class="code-block">' + App.escapeHtml(answer.data) + '</pre>'
+                  : '<p class="muted small">Нет ответа</p>')
+              : '<p class="muted small">Ответ студента: ' + formatAnswer(answer) + '</p>') +
             '<p class="muted small">Правильный ответ: ' + App.escapeHtml(correct) + '</p>' +
             (answer && answer.executionStatus
               ? '<p class="muted small">Тесты: ' + (answer.passedTests || 0) + ' из ' +
                 (answer.totalTests || 0) + ', балл: ' + (answer.score === null ? '—' : answer.score) + '</p>'
               : '') +
             (answer && answer.executionError
-              ? '<p class="muted small">Ошибка: ' + App.escapeHtml(answer.executionError) + '</p>'
+              ? '<p class="muted small">Ошибка:</p>' +
+                '<pre class="code-block">' + App.escapeHtml(answer.executionError) + '</pre>'
               : '') +
             '</article>';
         }).join('')
@@ -309,7 +319,7 @@
 
     var courses = await App.api.courses.list();
     var relevantCourses = state.role === 'teacher'
-      ? courses.filter(function (course) { return course.teacherId === state.user.id; })
+      ? courses.filter(function (course) { return App.sameId(course.teacherId, state.user.id); })
       : courses;
 
     var lists = await Promise.all(relevantCourses.map(function (course) {

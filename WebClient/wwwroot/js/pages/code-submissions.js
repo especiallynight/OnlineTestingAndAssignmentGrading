@@ -18,7 +18,43 @@
     if (!row.answer.executionStatus) {
       return 'not-submitted';
     }
-    return row.answer.executionStatus;
+    return App.verdictFromApi(row.answer.executionStatus);
+  }
+
+  function codeModalBody(row) {
+    var student = App.getUserById(row.attempt.studentId);
+    var assignment = App.getAssignmentById(row.attempt.assignmentId);
+    var answer = row.answer;
+
+    return '<div class="review-summary">' +
+      '<p><strong>Студент:</strong> ' +
+      App.escapeHtml(student ? student.fullName : '#' + row.attempt.studentId) + '</p>' +
+      '<p><strong>Тест:</strong> ' +
+      App.escapeHtml(assignment ? assignment.title : '#' + row.attempt.assignmentId) + '</p>' +
+      '<p><strong>Вопрос:</strong> ' +
+      App.escapeHtml(row.question ? row.question.text : 'Вопрос #' + answer.questionId) + '</p>' +
+      '<p><strong>Вердикт:</strong> ' + App.renderBadge(verdictOf(row)) +
+      ' <span class="muted small">тесты: ' + (answer.passedTests || 0) +
+      ' из ' + (answer.totalTests || 0) + ', балл: ' +
+      (answer.score === null || answer.score === undefined ? '—' : answer.score) + '</span></p>' +
+      '</div>' +
+      (answer.executionError
+        ? '<p class="muted small">Ошибка выполнения:</p>' +
+          '<pre class="code-block">' + App.escapeHtml(answer.executionError) + '</pre>'
+        : '') +
+      '<p class="muted small">Код студента:</p>' +
+      '<pre class="code-block">' + App.escapeHtml(answer.data || 'Код не сохранён') + '</pre>';
+  }
+
+  function openCode(row) {
+    App.openModal({
+      title: 'Код студента',
+      submitLabel: 'Закрыть',
+      body: codeModalBody(row),
+      onSubmit: function () {
+        // Закрытие выполняет сам диалог.
+      }
+    });
   }
 
   function renderStats() {
@@ -116,6 +152,13 @@
             ? '<span class="muted small">' + App.escapeHtml(row.answer.executionError) + '</span>'
             : '<span class="muted">—</span>';
         }
+      },
+      {
+        label: 'Действие',
+        render: function (row) {
+          return '<button class="btn btn-sm btn-soft" type="button" data-view-code="' +
+            row.answer.answerId + '">Посмотреть код</button>';
+        }
       }
     );
 
@@ -129,7 +172,7 @@
     var courses = await App.api.courses.list();
     if (state.role === 'teacher') {
       courses = courses.filter(function (course) {
-        return course.teacherId === state.user.id;
+        return App.sameId(course.teacherId, state.user.id);
       });
     }
 
@@ -224,6 +267,23 @@
       filter.addEventListener('change', function (event) {
         state.filter = event.target.value;
         renderTable();
+      });
+    }
+
+    var table = document.getElementById('submissions-table');
+    if (table) {
+      table.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-view-code]');
+        if (!button) {
+          return;
+        }
+        var answerId = button.getAttribute('data-view-code');
+        var row = state.rows.filter(function (item) {
+          return String(item.answer.answerId) === String(answerId);
+        })[0];
+        if (row) {
+          openCode(row);
+        }
       });
     }
 

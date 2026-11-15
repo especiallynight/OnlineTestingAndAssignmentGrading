@@ -28,7 +28,8 @@ namespace CourseService.Controllers
             int assignment_id,
             string text,
             string type,
-            JsonElement? options);
+            JsonElement? options,
+            JsonElement? examples);
 
         private static readonly DistributedCacheEntryOptions CacheOptions = new()
         {
@@ -45,7 +46,7 @@ namespace CourseService.Controllers
                 return NotFound("Задание не найдено");
             }
 
-            var key = $"assignments:{assignment_id}:questions";
+            var key = $"assignments:{assignment_id}:questions:v2";
             var cached = await _cache.GetStringAsync(key);
             if (cached != null)
                 return Ok(JsonSerializer.Deserialize<List<QuestionCacheItem>>(cached));
@@ -58,12 +59,41 @@ namespace CourseService.Controllers
                     assignment_id = question.AssignmentId,
                     text = question.QuestionText,
                     type = question.QuestionType,
-                    options = question.QuestionOptions
+                    options = question.QuestionOptions,
+                    test_cases = question.TestCases
                 })
                 .ToListAsync();
 
-            await _cache.SetStringAsync(key, JsonSerializer.Serialize(questions), CacheOptions);
-            return Ok(questions);
+            // Студент видит только примеры (первые тесты), а полный набор
+            // тестов остаётся скрытым и используется автопроверкой.
+            var payload = questions.Select(question => new QuestionCacheItem(
+                question.question_id,
+                question.assignment_id,
+                question.text,
+                question.type,
+                question.options,
+                BuildExamples(question.test_cases))).ToList();
+
+            await _cache.SetStringAsync(key, JsonSerializer.Serialize(payload), CacheOptions);
+            return Ok(payload);
+        }
+
+        private static JsonElement? BuildExamples(JsonElement? testCases, int maxExamples = 3)
+        {
+            if (testCases == null ||
+                testCases.Value.ValueKind != JsonValueKind.Array)
+            {
+                return null;
+            }
+
+            var examples = testCases.Value.EnumerateArray().Take(maxExamples).ToList();
+            if (examples.Count == 0)
+            {
+                return null;
+            }
+
+            var json = JsonSerializer.Serialize(examples);
+            return JsonDocument.Parse(json).RootElement.Clone();
         }
 
         // Полные данные вопросов (с правильными ответами) для редактора преподавателя.
@@ -166,7 +196,7 @@ namespace CourseService.Controllers
             _context.Questions.Add(question);
 
             await _context.SaveChangesAsync();
-            await _cache.RemoveAsync($"assignments:{assignment_id}:questions");
+            await _cache.RemoveAsync($"assignments:{assignment_id}:questions:v2");
             return StatusCode(201, new
             {
                 question_id = question.QuestionId,
@@ -222,7 +252,7 @@ namespace CourseService.Controllers
             question.TestCases = dto.TestCases?.Clone();
 
             await _context.SaveChangesAsync();
-            await _cache.RemoveAsync($"assignments:{question.AssignmentId}:questions");
+            await _cache.RemoveAsync($"assignments:{question.AssignmentId}:questions:v2");
 
             return Ok(new
             {
@@ -265,7 +295,7 @@ namespace CourseService.Controllers
 
             _context.Questions.Remove(question);
             await _context.SaveChangesAsync();
-            await _cache.RemoveAsync($"assignments:{assignment_id}:questions");
+            await _cache.RemoveAsync($"assignments:{assignment_id}:questions:v2");
 
             return NoContent();
         }

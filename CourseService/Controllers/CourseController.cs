@@ -343,7 +343,7 @@ namespace CourseService.Controllers
             await _cache.RemoveAsync("courses:list");
             await _cache.RemoveAsync($"courses:{course_id}");
             foreach (var assignmentId in assignmentIds)
-                await _cache.RemoveAsync($"assignments:{assignmentId}:questions");
+                await _cache.RemoveAsync($"assignments:{assignmentId}:questions:v2");
             return NoContent();
         }
     }

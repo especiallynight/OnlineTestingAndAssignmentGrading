@@ -21,7 +21,8 @@
     answers: {},
     debouncers: {},
     timerId: null,
-    finished: false
+    finished: false,
+    isCodeAssignment: false
   };
 
   function pad(value) {
@@ -29,16 +30,34 @@
   }
 
   function renderTestInfo() {
+    var pageTitle = state.isCodeAssignment
+      ? 'Задание на программирование'
+      : 'Прохождение теста';
+
     document.title = state.assignment.title + ' — OnlineTesting';
+
+    var heading = document.getElementById('test-page-title');
+    if (heading) {
+      heading.textContent = pageTitle;
+    }
+
     document.getElementById('test-title').textContent = state.assignment.title;
     document.getElementById('test-subtitle').textContent =
-      state.assignment.description || 'Тест без описания.';
+      state.assignment.description || 'Описание не заполнено.';
+
+    var submit = document.getElementById('test-submit');
+    if (submit) {
+      submit.textContent = state.isCodeAssignment
+        ? 'Завершить задание'
+        : 'Завершить попытку';
+    }
 
     var parts = [];
     if (state.course) {
       parts.push('Курс: ' + state.course.title);
     }
-    parts.push('Вопросов: ' + state.questions.length);
+    parts.push((state.isCodeAssignment ? 'Задач: ' : 'Вопросов: ') +
+      state.questions.length);
     parts.push('Время: ' + state.assignment.timeLimitMinutes + ' мин');
     parts.push('Максимум баллов: ' + state.assignment.maxScore);
     document.getElementById('test-meta').textContent = parts.join(' · ');
@@ -57,12 +76,38 @@
     }).join('') + '</div>';
   }
 
+  function renderExamples(question) {
+    var examples = question.examples || [];
+    if (!examples.length) {
+      return '';
+    }
+
+    return '<div class="code-examples">' +
+      '<p class="code-label">Примеры</p>' +
+      examples.map(function (example, index) {
+        return '<div class="code-example">' +
+          '<div>' +
+          '<span class="muted small">Ввод ' + (index + 1) + '</span>' +
+          '<pre class="code-block">' + App.escapeHtml(example.input || '(пусто)') + '</pre>' +
+          '</div>' +
+          '<div>' +
+          '<span class="muted small">Вывод</span>' +
+          '<pre class="code-block">' + App.escapeHtml(example.expectedOutput || '') + '</pre>' +
+          '</div>' +
+          '</div>';
+      }).join('') +
+      '</div>';
+  }
+
   function renderCode(question) {
     return '<div class="form-field">' +
       '<label for="q-' + question.id + '">Исходный код (C#)</label>' +
       '<textarea id="q-' + question.id + '" class="code-editor" rows="10" spellcheck="false" ' +
       'placeholder="// Напишите решение задачи"></textarea>' +
+      '<p class="form-hint">Программа читает данные из стандартного ввода ' +
+      '(Console.ReadLine) и выводит результат в стандартный вывод (Console.WriteLine).</p>' +
       '</div>' +
+      renderExamples(question) +
       '<div class="form-actions">' +
       '<button class="btn btn-sm btn-outline" type="button" data-check-code="' + question.id + '">' +
       'Проверить код</button>' +
@@ -406,6 +451,10 @@
 
     state.assignment = await App.api.assignments.get(id);
     state.questions = await App.api.questions.list(id);
+    state.isCodeAssignment = state.questions.length > 0 &&
+      state.questions.every(function (question) {
+        return question.type === 'code';
+      });
 
     try {
       state.course = await App.api.courses.get(state.assignment.courseId);

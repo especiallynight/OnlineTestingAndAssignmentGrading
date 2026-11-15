@@ -17,14 +17,44 @@
     user: null,
     courses: [],
     assignments: [],
+    selectedCourseId: null,
     selected: null,
     questions: []
   };
 
   function getTeacherCourses() {
     return state.courses.filter(function (course) {
-      return String(course.teacherId) === String(state.user.id);
+      return App.sameId(course.teacherId, state.user.id);
     });
+  }
+
+  function getSelectedCourse() {
+    return getTeacherCourses().filter(function (course) {
+      return App.sameId(course.id, state.selectedCourseId);
+    })[0] || null;
+  }
+
+  function courseAssignments() {
+    if (!state.selectedCourseId) {
+      return [];
+    }
+    return state.assignments.filter(function (assignment) {
+      return App.sameId(assignment.courseId, state.selectedCourseId);
+    });
+  }
+
+  function fillCourseSelect() {
+    var select = document.getElementById('editor-course-select');
+    if (!select) {
+      return;
+    }
+    select.innerHTML = getTeacherCourses().map(function (course) {
+      return '<option value="' + course.id + '">' +
+        App.escapeHtml(course.title) + '</option>';
+    }).join('');
+    if (state.selectedCourseId) {
+      select.value = state.selectedCourseId;
+    }
   }
 
   function fillTestSelect() {
@@ -32,10 +62,13 @@
     if (!select) {
       return;
     }
-    select.innerHTML = state.assignments.map(function (assignment) {
-      return '<option value="' + assignment.id + '">' +
-        App.escapeHtml(assignment.title) + '</option>';
-    }).join('');
+    var assignments = courseAssignments();
+    select.innerHTML = assignments.length
+      ? assignments.map(function (assignment) {
+          return '<option value="' + assignment.id + '">' +
+            App.escapeHtml(assignment.title) + '</option>';
+        }).join('')
+      : '<option value="">— в курсе нет тестов —</option>';
   }
 
   function renderSettings() {
@@ -127,21 +160,32 @@
     }
 
     if (type === 'code') {
-      var testCase = question && question.testCases.length ? question.testCases[0] : { input: '', expectedOutput: '' };
+      var testCases = question && question.testCases.length
+        ? question.testCases
+        : [{ input: '', expectedOutput: '' }];
       html +=
         '<div class="form-field">' +
-        '<label for="question-input">Входные данные теста</label>' +
-        '<input id="question-input" name="testInput" type="text" value="' +
-        App.escapeHtml(testCase.input || '') + '" placeholder="1 2">' +
+        '<label>Тесты (вход → ожидаемый вывод)</label>' +
+        '<div class="test-case-list" data-test-cases>' +
+        testCases.map(renderTestCaseRow).join('') +
         '</div>' +
-        '<div class="form-field">' +
-        '<label for="question-output">Ожидаемый вывод</label>' +
-        '<input id="question-output" name="testOutput" type="text" value="' +
-        App.escapeHtml(testCase.expectedOutput || '') + '" placeholder="3">' +
+        '<button class="btn btn-sm btn-outline" type="button" data-add-test>Добавить тест</button>' +
+        '<p class="form-hint">Первый тест показывается студенту как пример, остальные используются для скрытой проверки.</p>' +
         '</div>';
     }
 
     return html;
+  }
+
+  // Строка теста: входные данные и ожидаемый вывод.
+  function renderTestCaseRow(testCase) {
+    return '<div class="test-case-row" data-test-case>' +
+      '<input type="text" data-test-input placeholder="Входные данные" value="' +
+      App.escapeHtml(testCase.input || '') + '">' +
+      '<input type="text" data-test-output placeholder="Ожидаемый вывод" value="' +
+      App.escapeHtml(testCase.expectedOutput || '') + '">' +
+      '<button class="btn btn-sm btn-danger-soft" type="button" data-remove-test>Удалить</button>' +
+      '</div>';
   }
 
   // Собирает тело запроса из формы вопроса.
@@ -183,21 +227,42 @@
     } else {
       payload.options = {};
       payload.correctAnswer = null;
-      payload.testCases = [{
-        input: (values.testInput || '').trim(),
-        expectedOutput: (values.testOutput || '').trim()
-      }];
-      if (!payload.testCases[0].expectedOutput) {
-        throw new Error('Укажите ожидаемый вывод теста.');
+      var rows = Array.prototype.slice.call(
+        form.querySelectorAll('[data-test-case]'));
+      var testCases = rows.map(function (row) {
+        var input = row.querySelector('[data-test-input]');
+        var output = row.querySelector('[data-test-output]');
+        return {
+          input: input ? input.value.trim() : '',
+          expectedOutput: output ? output.value.trim() : ''
+        };
+      }).filter(function (testCase) {
+        return testCase.input !== '' || testCase.expectedOutput !== '';
+      });
+
+      if (!testCases.length) {
+        throw new Error('Добавьте хотя бы один тест.');
       }
+      if (testCases.some(function (testCase) {
+        return !testCase.expectedOutput;
+      })) {
+        throw new Error('Укажите ожидаемый вывод для каждого теста.');
+      }
+
+      payload.testCases = testCases;
     }
 
     return payload;
   }
 
   function openQuestionEditor(type, question) {
+    if (!state.selected) {
+      App.notify('Сначала создайте или выберите тест', 'error');
+      return;
+    }
+
     var isEdit = !!question;
-    App.openModal({
+    var modal = App.openModal({
       title: (isEdit ? 'Редактирование вопроса: ' : 'Новый вопрос: ') + TYPE_LABELS[type],
       submitLabel: isEdit ? 'Сохранить вопрос' : 'Добавить вопрос',
       body: buildQuestionBody(type, question),
@@ -213,6 +278,30 @@
         await loadQuestions();
       }
     });
+
+    if (type === 'code' && modal) {
+      var list = modal.form.querySelector('[data-test-cases]');
+      var addButton = modal.form.querySelector('[data-add-test]');
+      if (list && addButton) {
+        addButton.addEventListener('click', function () {
+          list.insertAdjacentHTML('beforeend', renderTestCaseRow({
+            input: '',
+            expectedOutput: ''
+          }));
+        });
+        list.addEventListener('click', function (event) {
+          var remove = event.target.closest('[data-remove-test]');
+          if (!remove) {
+            return;
+          }
+          if (list.querySelectorAll('[data-test-case]').length > 1) {
+            remove.closest('[data-test-case]').remove();
+          } else {
+            App.notify('Должен остаться хотя бы один тест', 'error');
+          }
+        });
+      }
+    }
   }
 
   // Рисует кнопки добавления вопросов.
@@ -278,6 +367,11 @@
 
   // Показывает предпросмотр теста.
   function openPreview() {
+    if (!state.selected) {
+      App.notify('Сначала создайте или выберите тест', 'error');
+      return;
+    }
+
     var body = state.questions.length
       ? state.questions.map(function (question, index) {
           return '<article class="question-card">' +
@@ -313,13 +407,10 @@
       return;
     }
 
-    // Курс не выбирается вручную: тест создаётся в курсе открытого теста,
-    // а если тест ещё не открыт — в первом курсе преподавателя.
-    var defaultCourse = state.selected
-      ? courses.filter(function (course) {
-          return String(course.id) === String(state.selected.courseId);
-        })[0] || courses[0]
-      : courses[0];
+    // Курс выбирается на странице конструктора, а не в самом окне:
+    // в форме остаются только параметры теста.
+    var defaultCourse = getSelectedCourse() || courses[0];
+    state.selectedCourseId = defaultCourse.id;
 
     App.openModal({
       title: 'Новый тест — ' + defaultCourse.title,
@@ -343,13 +434,17 @@
         '</div>',
       onSubmit: async function (form) {
         var values = App.formValues(form);
-        var created = await App.api.assignments.create(defaultCourse.id, {
-          name: values.name.trim(),
-          description: values.description.trim(),
-          maxScore: Number(values.maxScore),
-          timeLimitMinutes: Number(values.timeLimitMinutes)
-        });
-        App.notify('Тест создан', 'success');
+          var created = await App.api.assignments.create(defaultCourse.id, {
+              name: values.name.trim(),
+              description: values.description.trim(),
+              maxScore: Number(values.maxScore),
+              timeLimitMinutes: Number(values.timeLimitMinutes)
+          });
+
+          console.log('Созданное задание:', created);
+          App.notify('Тест создан', 'success');
+          await loadAssignments();
+          await selectTest(created.assignmentId);
         await loadAssignments();
         await selectTest(created.assignmentId);
       }
@@ -365,13 +460,22 @@
   }
 
   async function selectTest(id) {
-    state.selected = state.assignments.filter(function (assignment) {
+    var assignments = courseAssignments();
+    state.selected = assignments.filter(function (assignment) {
       return String(assignment.id) === String(id);
-    })[0] || state.assignments[0] || null;
+    })[0] || assignments[0] || null;
 
     if (!state.selected) {
       document.getElementById('question-list').innerHTML =
-        '<div class="empty-state"><p class="muted">У ваших курсов пока нет тестов.</p></div>';
+        '<div class="empty-state"><p class="muted">В этом курсе пока нет тестов. Нажмите «Новый тест».</p></div>';
+      var counter = document.getElementById('questions-count');
+      if (counter) {
+        counter.textContent = 'Всего вопросов: 0';
+      }
+      var select = document.getElementById('editor-test-select');
+      if (select) {
+        select.value = '';
+      }
       return;
     }
 
@@ -412,27 +516,65 @@
 
     try {
       state.courses = await App.api.courses.list();
-      await loadAssignments();
 
-      if (!state.assignments.length) {
+      var teacherCourses = getTeacherCourses();
+      if (!teacherCourses.length) {
         document.getElementById('question-list').innerHTML =
-          '<div class="empty-state"><p class="muted">У ваших курсов пока нет тестов. Нажмите «Новый тест».</p></div>';
-        renderQuestionActions();
+          '<div class="empty-state"><p class="muted">Сначала создайте курс в каталоге.</p></div>';
         return;
       }
 
+      // Курс можно передать из карточки курса: ?courseId=5.
+      var requestedCourseId = App.getQueryParam('courseId');
       var requestedId = App.getQueryParam('id');
+      var requestedCourse = teacherCourses.filter(function (course) {
+        return App.sameId(course.id, requestedCourseId);
+      })[0];
+
+      state.selectedCourseId = requestedCourse
+        ? requestedCourse.id
+        : teacherCourses[0].id;
+
+      fillCourseSelect();
+      await loadAssignments();
+
+      if (requestedId) {
+        var requestedAssignment = state.assignments.filter(function (assignment) {
+          return String(assignment.id) === String(requestedId);
+        })[0];
+        if (requestedAssignment) {
+          state.selectedCourseId = requestedAssignment.courseId;
+          fillCourseSelect();
+          fillTestSelect();
+        }
+      }
+
       await selectTest(requestedId);
       renderQuestionActions();
       bindQuestionList();
 
+      document.getElementById('editor-course-select').addEventListener('change', function (event) {
+        state.selectedCourseId = event.target.value;
+        fillTestSelect();
+        var first = courseAssignments()[0];
+        selectTest(first ? first.id : null).catch(function (error) {
+          App.notify(error.message, 'error');
+        });
+      });
+
       document.getElementById('editor-test-select').addEventListener('change', function (event) {
+        if (!event.target.value) {
+          return;
+        }
         selectTest(event.target.value).catch(function (error) {
           App.notify(error.message, 'error');
         });
       });
 
       App.bindForm('test-settings-form', async function (event, form) {
+        if (!state.selected) {
+          throw new Error('Сначала создайте тест в выбранном курсе.');
+        }
         var values = App.formValues(form);
         try {
           await App.api.assignments.update(state.selected.id, {
@@ -450,6 +592,11 @@
       });
 
       document.getElementById('test-preview-btn').addEventListener('click', openPreview);
+
+      // Переход из карточки курса: сразу открываем окно нового теста.
+      if (App.getQueryParam('create') === '1') {
+        openCreateTest();
+      }
     } catch (error) {
       App.showError('question-list', error);
     }
