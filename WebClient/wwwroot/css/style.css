@@ -624,6 +624,26 @@ main {
   color: var(--color-muted);
 }
 
+/* Красное уведомление об ошибке внутри формы или на странице. */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid #f0b4b4;
+  border-left: 4px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.alert[hidden] {
+  display: none;
+}
+
 .form-actions {
   display: flex;
   align-items: center;

@@ -1021,9 +1021,9 @@ window.App = (function () {
       notify(error && error.message ? error.message : String(error), 'error');
       return;
     }
-    container.innerHTML = '<div class="empty-state"><p class="muted">' +
+    container.innerHTML = '<div class="alert alert-error" role="alert">' +
       escapeHtml(error && error.message ? error.message : String(error)) +
-      '</p></div>';
+      '</div>';
   }
 
   // Ограничивает частоту вызовов (например, при поиске).
@@ -1078,10 +1078,10 @@ window.App = (function () {
       '</div>' +
       '<form class="form-stack" id="modal-form">' +
       (options.body || '') +
+      '<div class="alert alert-error" data-error role="alert" hidden></div>' +
       '<div class="form-actions">' +
       '<button class="btn btn-primary" type="submit">' +
       escapeHtml(options.submitLabel || 'Сохранить') + '</button>' +
-      '<span class="form-hint modal-error" data-error></span>' +
       '</div>' +
       '</form>' +
       '</div>';
@@ -1105,12 +1105,21 @@ window.App = (function () {
       var errorHost = overlay.querySelector('[data-error]');
       submit.disabled = true;
       errorHost.textContent = '';
+      errorHost.hidden = true;
       try {
         await options.onSubmit(form);
         close();
       } catch (error) {
-        errorHost.textContent = error.message || 'Не удалось сохранить изменения';
+        errorHost.textContent = error && error.message
+          ? error.message
+          : 'Не удалось сохранить изменения';
+        errorHost.hidden = false;
         submit.disabled = false;
+
+        // Прокручиваем форму к красному уведомлению, если оно вне экрана.
+        if (typeof errorHost.scrollIntoView === 'function') {
+          errorHost.scrollIntoView({ block: 'nearest' });
+        }
       }
     });
 
