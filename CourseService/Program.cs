@@ -109,25 +109,29 @@ using (var scope = app.Services.CreateScope())
         ]
         """;
 
+    // Демонстрационные данные: два курса, два теста и одно задание на код.
+    // Набор создаётся только в пустой базе, поэтому повторный запуск
+    // сервиса не добавляет дубликаты.
     if (!await db.Courses.AnyAsync())
     {
         var demoTeacherId = builder.Configuration.GetValue("Demo:TeacherId", 2);
         var demoStudentId = builder.Configuration.GetValue("Demo:StudentId", 3);
+        var now = DateTimeOffset.UtcNow;
 
         var csharpCourse = new Course
         {
             Name = "Основы программирования на C#",
             Description = "Базовый курс по языку C#: типы данных, управляющие конструкции, ООП и работа с коллекциями.",
             TeacherId = demoTeacherId,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = now
         };
 
         var webCourse = new Course
         {
-            Name = "Веб-разработка: HTML, CSS, JavaScript",
+            Name = "Веб-разработка: HTML, CSS и JavaScript",
             Description = "Создание адаптивных интерфейсов, основы DOM, события и работа с сетевыми запросами.",
             TeacherId = demoTeacherId,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = now
         };
 
         db.Courses.AddRange(csharpCourse, webCourse);
@@ -138,19 +142,28 @@ using (var scope = app.Services.CreateScope())
             Name = "Вводный тест по C#",
             Description = "Проверка базовых знаний платформы .NET и синтаксиса языка.",
             MaxScore = 10,
+            TimeLimitMinutes = 20
+        };
+
+        var jsTest = new Assignment
+        {
+            Course = webCourse,
+            Name = "Тест по основам JavaScript",
+            Description = "Типы данных, массивы, функции и работа с DOM.",
+            MaxScore = 10,
+            TimeLimitMinutes = 20
+        };
+
+        var sumAssignment = new Assignment
+        {
+            Course = csharpCourse,
+            Name = "Задача: сумма двух чисел",
+            Description = "Прочитайте два целых числа и выведите их сумму.",
+            MaxScore = 10,
             TimeLimitMinutes = 30
         };
 
-        var webTest = new Assignment
-        {
-            Course = webCourse,
-            Name = "JavaScript: основы",
-            Description = "Типы данных, массивы, функции и работа с DOM.",
-            MaxScore = 10,
-            TimeLimitMinutes = 40
-        };
-
-        db.Assignments.AddRange(csharpTest, webTest);
+        db.Assignments.AddRange(csharpTest, jsTest, sumAssignment);
 
         db.Questions.AddRange(
             new Question
@@ -172,14 +185,14 @@ using (var scope = app.Services.CreateScope())
             new Question
             {
                 Assignment = csharpTest,
-                QuestionText = sumQuestionText,
-                QuestionType = "Code",
-                QuestionOptions = Json("{}"),
-                TestCases = Json(sumTestCasesJson)
+                QuestionText = "Что выведет Console.WriteLine(2 + 3 * 4)?",
+                QuestionType = "SingleChoice",
+                QuestionOptions = Json("""{"a":"20","b":"14","c":"24"}"""),
+                CorrectAnswer = Json("\"b\"")
             },
             new Question
             {
-                Assignment = webTest,
+                Assignment = jsTest,
                 QuestionText = "Какой метод создаёт новый массив?",
                 QuestionType = "SingleChoice",
                 QuestionOptions = Json("""{"a":"map","b":"push","c":"pop"}"""),
@@ -187,72 +200,42 @@ using (var scope = app.Services.CreateScope())
             },
             new Question
             {
-                Assignment = webTest,
-                QuestionText = "Какие методы не меняют массив?",
+                Assignment = jsTest,
+                QuestionText = "Какие методы не меняют исходный массив?",
                 QuestionType = "MultipleChoice",
                 QuestionOptions = Json("""{"a":"map","b":"filter","c":"push","d":"slice"}"""),
                 CorrectAnswer = Json("""["a","b","d"]""")
+            },
+            new Question
+            {
+                Assignment = jsTest,
+                QuestionText = "Что вернёт typeof null?",
+                QuestionType = "SingleChoice",
+                QuestionOptions = Json("""{"a":"null","b":"object","c":"undefined"}"""),
+                CorrectAnswer = Json("\"b\"")
+            },
+            new Question
+            {
+                Assignment = sumAssignment,
+                QuestionText = sumQuestionText,
+                QuestionType = "Code",
+                QuestionOptions = Json("{}"),
+                TestCases = Json(sumTestCasesJson)
             });
 
-        db.Enrollments.Add(new Enrollment
-        {
-            Course = csharpCourse,
-            StudentId = demoStudentId,
-            EnrolledAt = DateTimeOffset.UtcNow
-        });
-
-        await db.SaveChangesAsync();
-    }
-
-    // Обновляем демонстрационную задачу Sum и в уже существующей базе:
-    // добавляем примеры и несколько тестов, чтобы решение нельзя было
-    // захардкодить под один набор входных данных.
-    var sumQuestion = await db.Questions
-        .Include(question => question.Assignment)
-        .FirstOrDefaultAsync(question =>
-            question.QuestionType == "Code" &&
-            question.Assignment.Name == "Вводный тест по C#");
-
-    if (sumQuestion != null)
-    {
-        var currentTests = sumQuestion.TestCases?.GetRawText() ?? string.Empty;
-
-        if (!currentTests.Contains("-5 8"))
-        {
-            sumQuestion.QuestionText = sumQuestionText;
-            sumQuestion.TestCases = Json(sumTestCasesJson);
-            await db.SaveChangesAsync();
-        }
-    }
-
-    // Отдельное демонстрационное задание на код. Все его вопросы имеют тип
-    // Code, поэтому в карточке курса оно попадает в раздел «Задания на код».
-    var csharpCourseForCode = await db.Courses
-        .FirstOrDefaultAsync(course => course.Name == "Основы программирования на C#");
-
-    if (csharpCourseForCode != null &&
-        !await db.Assignments.AnyAsync(assignment =>
-            assignment.CourseId == csharpCourseForCode.CourseId &&
-            assignment.Name == "Задание: сумма двух чисел"))
-    {
-        var codeAssignment = new Assignment
-        {
-            CourseId = csharpCourseForCode.CourseId,
-            Name = "Задание: сумма двух чисел",
-            Description = "Прочитайте два целых числа и выведите их сумму.",
-            MaxScore = 10,
-            TimeLimitMinutes = 30
-        };
-
-        db.Assignments.Add(codeAssignment);
-        db.Questions.Add(new Question
-        {
-            Assignment = codeAssignment,
-            QuestionText = sumQuestionText,
-            QuestionType = "Code",
-            QuestionOptions = Json("{}"),
-            TestCases = Json(sumTestCasesJson)
-        });
+        db.Enrollments.AddRange(
+            new Enrollment
+            {
+                Course = csharpCourse,
+                StudentId = demoStudentId,
+                EnrolledAt = now
+            },
+            new Enrollment
+            {
+                Course = webCourse,
+                StudentId = demoStudentId,
+                EnrolledAt = now
+            });
 
         await db.SaveChangesAsync();
     }
@@ -264,7 +247,7 @@ using (var scope = app.Services.CreateScope())
         var csharpCourse = await db.Courses
             .FirstOrDefaultAsync(course => course.Name == "Основы программирования на C#");
         var webCourse = await db.Courses
-            .FirstOrDefaultAsync(course => course.Name == "Веб-разработка: HTML, CSS, JavaScript");
+            .FirstOrDefaultAsync(course => course.Name == "Веб-разработка: HTML, CSS и JavaScript");
 
         var materials = new List<CourseMaterial>();
 
