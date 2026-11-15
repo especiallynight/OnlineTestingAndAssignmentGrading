@@ -138,7 +138,73 @@ flowchart LR
 
 
 
-![ER-диаграмма](er-diagram.png)
+```mermaid
+erDiagram
+    COURSE ||--o{ ASSIGNMENT : "содержит задания"
+    COURSE ||--o{ COURSE_MATERIAL : "содержит теорию"
+    COURSE ||--o{ ENROLLMENT : "записывает студентов"
+    ASSIGNMENT ||--o{ QUESTION : "содержит вопросы"
+
+    COURSE {
+        int CourseId PK
+        string Name
+        string Description
+        int TeacherId
+        datetime CreatedAt
+    }
+
+    ASSIGNMENT {
+        int AssignmentId PK
+        int CourseId FK
+        string Name
+        string Description
+        int MaxScore
+        int TimeLimitMinutes
+    }
+
+    QUESTION {
+        int QuestionId PK
+        int AssignmentId FK
+        string QuestionText
+        string QuestionType
+        jsonb QuestionOptions
+        jsonb CorrectAnswer
+        jsonb TestCases
+    }
+
+    COURSE_MATERIAL {
+        int CourseMaterialId PK
+        int CourseId FK
+        string Title
+        string Content
+        int SortOrder
+        datetime CreatedAt
+    }
+
+    ENROLLMENT {
+        int EnrollmentId PK
+        int CourseId FK
+        int StudentId
+        datetime EnrolledAt
+    }
+```
+
+В `CourseDB` одна сущность `Assignment` описывает и тест, и задание на код.
+Отдельной таблицы `Tests` нет, поэтому у курса ровно одна связь с заданиями:
+
+- **тест** — `Assignment`, у которого хотя бы один вопрос имеет тип, отличный от `Code`;
+- **задание на код** — `Assignment`, все вопросы которого имеют тип `Code`.
+
+Классификация вычисляется в веб-клиенте по типам вопросов и не хранится в базе,
+поэтому разделы «Тесты» и «Задания на код» используют одну и ту же связь
+`Course 1 — * Assignment`. Тип вопроса определяет и способ проверки:
+`SingleChoice`, `MultipleChoice` проверяет `GradingService`, `Code` —
+`CodeExecutionService`.
+
+`ExamService` хранит попытки и ответы в собственной базе и ссылается на
+`AssignmentId` и `QuestionId` логически, без внешнего ключа между базами.
+`Enrollment.StudentId` так же логически ссылается на пользователя из
+`IdentityService`.
 
 
 

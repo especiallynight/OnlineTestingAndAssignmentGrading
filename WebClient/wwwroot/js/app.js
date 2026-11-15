@@ -319,6 +319,23 @@ window.App = (function () {
     }[value] || value || '';
   }
 
+  // Склоняет русское слово по числу: plural(3, 'вопрос', 'вопроса', 'вопросов').
+  function plural(count, one, few, many) {
+    var value = Math.abs(Number(count)) % 100;
+    var last = value % 10;
+
+    if (value > 10 && value < 20) {
+      return many;
+    }
+    if (last > 1 && last < 5) {
+      return few;
+    }
+    if (last === 1) {
+      return one;
+    }
+    return many;
+  }
+
   function userFullName(user) {
     if (!user) {
       return '—';
@@ -1140,6 +1157,7 @@ window.App = (function () {
     attemptStatusFromApi: attemptStatusFromApi,
     answerStatusFromApi: answerStatusFromApi,
     verdictFromApi: verdictFromApi,
+    plural: plural,
     optionEntries: optionEntries,
     normalizeUser: normalizeUser,
     normalizeCourse: normalizeCourse,

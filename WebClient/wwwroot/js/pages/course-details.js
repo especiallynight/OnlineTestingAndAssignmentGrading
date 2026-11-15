@@ -490,19 +490,25 @@
     }
 
     // HTML строки тестового случая для задачи на программирование.
+    // Каждое поле обёрнуто в .form-field, чтобы подпись стояла над своим
+    // полем, а кнопка удаления была справа и не ломала сетку.
     function renderTestCaseRow(testCase) {
         testCase = testCase || {};
 
-        return '<div class="test-case-row form-field">' +
+        return '<div class="test-case-row" data-test-case>' +
+            '<div class="form-field">' +
             '<label>Входные данные</label>' +
             '<textarea name="testInput" rows="2">' +
             App.escapeHtml(testCase.input || '') +
             '</textarea>' +
+            '</div>' +
+            '<div class="form-field">' +
             '<label>Ожидаемый результат</label>' +
             '<textarea name="expectedOutput" rows="2" required>' +
             App.escapeHtml(testCase.expectedOutput || '') +
             '</textarea>' +
-            '<button type="button" class="btn btn-sm btn-danger-soft" data-remove-case>Удалить тестовый случай</button>' +
+            '</div>' +
+            '<button type="button" class="btn btn-sm btn-danger-soft" data-remove-case>Удалить</button>' +
             '</div>';
     }
 
@@ -559,10 +565,12 @@
 
             body +=
                 '<p class="muted small">Добавьте входные данные и ожидаемый результат для каждого тестового случая.</p>' +
-                '<div id="question-test-cases">' +
+                '<div class="test-case-list" id="question-test-cases">' +
                 cases.map(renderTestCaseRow).join('') +
                 '</div>' +
-                '<button type="button" class="btn btn-sm btn-outline" id="add-test-case">Добавить тестовый случай</button>';
+                '<div class="test-case-actions">' +
+                '<button type="button" class="btn btn-sm btn-outline" id="add-test-case">Добавить тестовый случай</button>' +
+                '</div>';
         }
 
         App.openModal({
@@ -917,8 +925,11 @@
         });
 
         App.renderCards('course-tests', tests.map(function (assignment) {
-            var subtitle = assignment.timeLimitMinutes + ' минут · ' +
-                (state.questionsCount[assignment.id] || 0) + ' вопросов';
+            var questions = state.questionsCount[assignment.id] || 0;
+            var subtitle = assignment.timeLimitMinutes + ' ' +
+                App.plural(assignment.timeLimitMinutes, 'минута', 'минуты', 'минут') +
+                ' · ' + questions + ' ' +
+                App.plural(questions, 'вопрос', 'вопроса', 'вопросов');
 
             var href = '';
             var hrefLabel = '';

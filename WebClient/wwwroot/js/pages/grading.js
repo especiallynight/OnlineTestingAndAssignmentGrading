@@ -105,7 +105,7 @@
         }
       },
       {
-        label: 'Тест',
+        label: 'Задание',
         render: function (attempt) {
           var assignment = App.getAssignmentById(attempt.assignmentId);
           return App.escapeHtml(assignment ? assignment.title : 'Задание #' + attempt.assignmentId);
@@ -217,7 +217,7 @@
     return '<div class="review-summary">' +
       '<p><strong>Студент:</strong> ' + App.escapeHtml(
         (App.getUserById(attempt.studentId) || {}).fullName || '#' + attempt.studentId) + '</p>' +
-      '<p><strong>Тест:</strong> ' + App.escapeHtml(assignment ? assignment.title : '#' + attempt.assignmentId) + '</p>' +
+      '<p><strong>Задание:</strong> ' + App.escapeHtml(assignment ? assignment.title : '#' + attempt.assignmentId) + '</p>' +
       '<p><strong>Статус попытки:</strong> ' + App.escapeHtml(App.statusLabel(attempt.status)) + '</p>' +
       '</div>' +
       gradeHtml +

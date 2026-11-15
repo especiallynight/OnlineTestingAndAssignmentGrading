@@ -1495,12 +1495,28 @@ main {
 .test-case-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
+  gap: 12px;
+  align-items: end;
+}
+
+.test-case-row .form-field {
+  min-width: 0;
+}
+
+.test-case-row .form-field textarea {
+  min-height: 64px;
 }
 
 .test-case-row input {
   min-width: 0;
+}
+
+.test-case-row .btn {
+  white-space: nowrap;
+}
+
+.test-case-actions {
+  display: flex;
 }
 
 @media (max-width: 640px) {

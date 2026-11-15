@@ -39,7 +39,7 @@
     var best = percents.length ? Math.max.apply(null, percents) : null;
 
     App.renderCards('results-stats', [
-      { title: 'Всего попыток', value: state.attempts.length, subtitle: 'Все прохождения тестов' },
+      { title: 'Всего попыток', value: state.attempts.length, subtitle: 'Все прохождения' },
       { title: 'Проверено', value: graded.length, subtitle: 'Оценки выставлены' },
       {
         title: 'Средний результат',
@@ -57,7 +57,7 @@
   function renderTable() {
     App.renderTable('results-table', [
       {
-        label: 'Тест',
+        label: 'Задание',
         render: function (attempt) {
           var assignment = state.assignments[attempt.assignmentId];
           return '<span class="table-title">' +
@@ -118,7 +118,7 @@
               App.url('test-taking.html') + '?id=' + assignment.id + '">Продолжить</a>';
           }
           return '<span class="muted small">' +
-            (attempt.status === 'completed' ? 'Тест пройден' : 'Попытка использована') +
+            (attempt.status === 'completed' ? 'Работа завершена' : 'Попытка использована') +
             '</span>';
         }
       }

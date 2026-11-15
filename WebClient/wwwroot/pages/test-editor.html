@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Конструктор теста — OnlineTesting</title>
+  <title>Конструктор заданий — OnlineTesting</title>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -13,8 +13,8 @@
     <div class="container">
       <div class="page-head">
         <div>
-          <h1>Конструктор теста</h1>
-          <p class="page-subtitle">Параметры теста и вопросы: задания хранятся в CourseService.</p>
+          <h1>Конструктор заданий</h1>
+          <p class="page-subtitle">Параметры задания и вопросы: задания хранятся в CourseService.</p>
           <span class="service-note">Сервис: CourseService</span>
         </div>
         <div id="editor-actions"></div>
@@ -26,13 +26,13 @@
           <select id="editor-course-select"></select>
         </div>
         <div class="form-field">
-          <label for="editor-test-select">Редактируемый тест</label>
+          <label for="editor-test-select">Редактируемое задание</label>
           <select id="editor-test-select"></select>
         </div>
       </div>
 
       <form class="form-card" id="test-settings-form">
-        <h2>Параметры теста</h2>
+        <h2>Параметры задания</h2>
         <div class="form-grid">
           <div class="form-field form-field-full">
             <label for="test-title-input">Название</label>
@@ -52,13 +52,13 @@
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn btn-primary" type="submit">Сохранить тест</button>
+          <button class="btn btn-primary" type="submit">Сохранить задание</button>
           <button class="btn btn-outline" type="button" id="test-preview-btn">Предпросмотр</button>
         </div>
       </form>
 
       <div class="section-head">
-        <h2 class="section-title">Вопросы теста</h2>
+        <h2 class="section-title">Вопросы задания</h2>
         <span class="muted small" id="questions-count"></span>
       </div>
 

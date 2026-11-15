@@ -20,7 +20,7 @@
       return [
         { label: 'Дашборд', page: 'index.html' },
         { label: 'Курсы', page: 'courses.html' },
-        { label: 'Конструктор теста', page: 'test-editor.html' },
+        { label: 'Конструктор заданий', page: 'test-editor.html' },
         { label: 'Проверка работ', page: 'grading.html' },
         { label: 'Проверка кода', page: 'code-submissions.html' },
         { label: 'Аналитика', page: 'analytics.html' }

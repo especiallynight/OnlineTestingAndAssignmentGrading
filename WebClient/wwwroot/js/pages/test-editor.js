@@ -1,6 +1,6 @@
 /*
- * test-editor.js — конструктор теста преподавателя.
- * Тест — это задание CourseService, вопросы хранятся там же.
+ * test-editor.js — конструктор заданий преподавателя.
+ * Задание CourseService хранит и тест, и задачу на код, вопросы лежат там же.
  */
 (function () {
   'use strict';
@@ -68,7 +68,7 @@
           return '<option value="' + assignment.id + '">' +
             App.escapeHtml(assignment.title) + '</option>';
         }).join('')
-      : '<option value="">— в курсе нет тестов —</option>';
+      : '<option value="">— в курсе нет заданий —</option>';
   }
 
   function renderSettings() {
@@ -91,7 +91,7 @@
           App.escapeHtml(option.text) + (correct ? ' ✓' : '') + '</span>';
       }).join('') + '</div>';
     } else if (question.type === 'code') {
-      optionsPreview = '<p class="muted small">Тестов: ' + question.testCases.length + '</p>';
+      optionsPreview = '<p class="muted small">Тестовых случаев: ' + question.testCases.length + '</p>';
     } else {
       optionsPreview = '<p class="muted small">Варианты не заданы</p>';
     }
@@ -123,7 +123,7 @@
 
     if (!state.questions.length) {
       container.innerHTML = '<div class="empty-state"><p class="muted">' +
-        'В этом тесте пока нет вопросов. Добавьте первый вопрос кнопками выше.</p></div>';
+        'В этом задании пока нет вопросов. Добавьте первый вопрос кнопками выше.</p></div>';
       return;
     }
 
@@ -387,7 +387,7 @@
               : '') +
             '</article>';
         }).join('')
-      : '<p class="muted">В тесте пока нет вопросов.</p>';
+      : '<p class="muted">В задании пока нет вопросов.</p>';
 
     App.openModal({
       title: 'Предпросмотр: ' + state.selected.title,
@@ -467,7 +467,7 @@
 
     if (!state.selected) {
       document.getElementById('question-list').innerHTML =
-        '<div class="empty-state"><p class="muted">В этом курсе пока нет тестов. Нажмите «Новый тест».</p></div>';
+        '<div class="empty-state"><p class="muted">В этом курсе пока нет заданий. Нажмите «Новый тест».</p></div>';
       var counter = document.getElementById('questions-count');
       if (counter) {
         counter.textContent = 'Всего вопросов: 0';

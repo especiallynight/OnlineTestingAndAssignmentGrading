@@ -59,7 +59,7 @@
         text: course.description || 'Описание не заполнено.',
         badge: 'active',
         meta: [
-          'Тестов: ' + course.assignmentsCount,
+          'Заданий: ' + course.assignmentsCount,
           'Студентов: ' + course.studentsCount,
           'Создан: ' + App.formatDateOnly(course.createdAt)
         ],

@@ -104,14 +104,14 @@
 
     App.renderCards('dashboard-stats', [
       { title: 'Мои курсы', value: state.courses.length, subtitle: 'Активные записи' },
-      { title: 'Доступные тесты', value: assignments.length, subtitle: 'В ваших курсах' },
+      { title: 'Доступные задания', value: assignments.length, subtitle: 'В ваших курсах' },
       { title: 'Мои попытки', value: state.attempts.length, subtitle: 'Все прохождения' },
       { title: 'Средний результат', value: averagePercent(graded), subtitle: 'По проверенным работам' }
     ]);
 
     document.getElementById('dashboard-main-title').textContent = 'Мои курсы';
     document.getElementById('dashboard-main-note').textContent =
-      'Откройте курс, чтобы пройти тесты';
+      'Откройте курс, чтобы пройти задания';
 
     App.renderTable('dashboard-main-table', [
       {
@@ -128,7 +128,7 @@
         }
       },
       {
-        label: 'Тестов',
+        label: 'Заданий',
         render: function (course) {
           var count = assignments.filter(function (assignment) {
             return String(assignment.courseId) === String(course.id);
@@ -187,8 +187,8 @@
 
     App.renderCards('dashboard-stats', [
       { title: 'Мои курсы', value: state.courses.length, subtitle: 'Курсы, где вы преподаватель' },
-      { title: 'Мои тесты', value: assignments.length, subtitle: 'Задания в ваших курсах' },
-      { title: 'Попытки студентов', value: attempts.length, subtitle: 'По вашим тестам' },
+      { title: 'Мои задания', value: assignments.length, subtitle: 'Задания в ваших курсах' },
+      { title: 'Попытки студентов', value: attempts.length, subtitle: 'По вашим заданиям' },
       { title: 'Без оценки', value: pending.length, subtitle: 'Ожидают проверки' }
     ]);
 
@@ -205,7 +205,7 @@
         }
       },
       {
-        label: 'Тест',
+        label: 'Задание',
         render: function (attempt) {
           var assignment = App.getAssignmentById(attempt.assignmentId);
           return App.escapeHtml(assignment ? assignment.title : '#' + attempt.assignmentId);
@@ -244,7 +244,7 @@
       }).length;
       return {
         title: course.title,
-        subtitle: 'Тестов: ' + count,
+        subtitle: 'Заданий: ' + count,
         meta: [
           'Студентов: ' + course.studentsCount,
           'Создан: ' + App.formatDateOnly(course.createdAt)
@@ -300,7 +300,7 @@
         title: course.title,
         subtitle: teacher ? teacher.fullName : 'Преподаватель #' + course.teacherId,
         meta: [
-          'Тестов: ' + course.assignmentsCount,
+          'Заданий: ' + course.assignmentsCount,
           'Студентов: ' + course.studentsCount
         ],
         href: App.url('analytics.html'),
