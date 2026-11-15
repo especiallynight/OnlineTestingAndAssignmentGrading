@@ -1,478 +1,580 @@
+
 /*
  * home.js — дашборд. Содержимое зависит от роли пользователя.
  * Данные загружаются из микросервисов через ApiGateway.
  */
+
+
 (function () {
-  'use strict';
+    'use strict';
 
-  var App = window.App;
+    var App = window.App;
 
-  var state = {
-    role: null,
-    user: null,
-    users: [],
-    courses: [],
-    assignments: [],
-    attempts: [],
-    grades: {},
-    teacherApplication: null
-  };
+    var state = {
+        role: null,
+        user: null,
+        users: [],
+        courses: [],
+        assignments: [],
+        attempts: [],
+        grades: {},
+        teacherApplication: null
+    };
 
-  function percent(score, maxScore) {
-    var max = Number(maxScore);
-    if (!max) {
-      return null;
-    }
-    return Math.round((Number(score) / max) * 100);
-  }
+    function percent(score, maxScore) {
+        var max = Number(maxScore);
 
-  function averagePercent(gradedAttempts) {
-    var values = gradedAttempts.map(function (attempt) {
-      var grade = state.grades[attempt.id];
-      return grade ? percent(grade.score, grade.maxScore) : null;
-    }).filter(function (value) {
-      return value !== null;
-    });
-    if (!values.length) {
-      return '—';
-    }
-    return Math.round(values.reduce(function (sum, value) {
-      return sum + value;
-    }, 0) / values.length) + '%';
-  }
-
-  function myAssignments() {
-    var courseIds = {};
-    state.courses.forEach(function (course) {
-      courseIds[String(course.id)] = true;
-    });
-    return state.assignments.filter(function (assignment) {
-      return courseIds[String(assignment.courseId)];
-    });
-  }
-
-  function relevantAttempts() {
-    if (state.role !== 'teacher') {
-      return state.attempts;
-    }
-    var assignmentIds = {};
-    myAssignments().forEach(function (assignment) {
-      assignmentIds[String(assignment.id)] = true;
-    });
-    return state.attempts.filter(function (attempt) {
-      return assignmentIds[String(attempt.assignmentId)];
-    });
-  }
-
-  async function loadGrades(attempts) {
-    state.grades = {};
-    await Promise.all(attempts.map(async function (attempt) {
-      try {
-        state.grades[attempt.id] = await App.api.grades.byAttempt(attempt.id);
-      } catch (error) {
-        state.grades[attempt.id] = null;
-      }
-    }));
-  }
-
-  function renderHeading() {
-    var subtitle = document.getElementById('dashboard-subtitle');
-    var actions = document.getElementById('dashboard-actions');
-    if (!subtitle || !actions) {
-      return;
-    }
-
-    subtitle.textContent = 'Здравствуйте, ' + state.user.fullName +
-      '. Сводка по вашей роли в системе онлайн-тестирования.';
-
-    if (state.role === 'student') {
-      actions.innerHTML = '<a class="btn btn-primary" href="' +
-        App.url('courses.html') + '">Перейти к курсам</a>';
-    } else if (state.role === 'teacher') {
-      actions.innerHTML = '<a class="btn btn-primary" href="' +
-        App.url('test-editor.html') + '">Создать тест</a>';
-    } else {
-      actions.innerHTML = '<a class="btn btn-primary" href="' +
-        App.url('admin-users.html') + '">Управление пользователями</a>';
-    }
-  }
-
-  // Статус заявки приходит числом (0 — Pending, 1 — Approved,
-  // 2 — Rejected) или строкой, если на бэкенде включён StringEnumConverter.
-  function applicationStatus(application) {
-    if (!application) {
-      return null;
-    }
-
-    var status = application.status;
-
-    if (status === 0 || status === '0' || status === 'Pending') {
-      return 'pending';
-    }
-    if (status === 1 || status === '1' || status === 'Approved') {
-      return 'approved';
-    }
-    if (status === 2 || status === '2' || status === 'Rejected') {
-      return 'rejected';
-    }
-    return null;
-  }
-
-  // Блок заявки на роль преподавателя на дашборде студента.
-  function renderTeacherApplication() {
-    var host = document.getElementById('dashboard-teacher-application');
-    if (!host) {
-      return;
-    }
-
-    var status = applicationStatus(state.teacherApplication);
-
-    if (status === 'pending') {
-      host.innerHTML =
-        '<section class="card dashboard-application">' +
-        '<div class="flex-between">' +
-        '<div>' +
-        '<h2 class="section-title">Заявка на преподавателя</h2>' +
-        '<p class="muted">Заявка отправлена и ожидает рассмотрения администратором.</p>' +
-        '</div>' +
-        App.renderBadge('pending') +
-        '</div>' +
-        '</section>';
-      return;
-    }
-
-    if (status === 'approved') {
-      host.innerHTML =
-        '<section class="card dashboard-application">' +
-        '<h2 class="section-title">Заявка на преподавателя</h2>' +
-        '<p class="muted">Заявка одобрена. Войдите заново, чтобы получить роль преподавателя.</p>' +
-        '</section>';
-      return;
-    }
-
-    host.innerHTML =
-      '<section class="card dashboard-application">' +
-      '<div class="flex-between">' +
-      '<div>' +
-      '<h2 class="section-title">Стать преподавателем</h2>' +
-      '<p class="muted">Подайте заявку — администратор рассмотрит её и выдаст роль преподавателя.</p>' +
-      (status === 'rejected'
-        ? '<p class="alert alert-error">Предыдущая заявка отклонена. Можно подать новую.</p>'
-        : '') +
-      '</div>' +
-      '<button class="btn btn-primary" type="button" id="apply-teacher">Подать заявку</button>' +
-      '</div>' +
-      '</section>';
-
-    var button = document.getElementById('apply-teacher');
-    if (button) {
-      button.addEventListener('click', function () {
-        submitTeacherApplication(button);
-      });
-    }
-  }
-
-  async function submitTeacherApplication(button) {
-    button.disabled = true;
-    button.textContent = 'Отправляем…';
-
-    try {
-      await App.api.auth.applyForTeacher();
-      App.notify('Заявка на преподавателя отправлена', 'success');
-      state.teacherApplication = await App.api.auth.myTeacherApplication()
-        .catch(function () { return null; });
-      renderTeacherApplication();
-    } catch (error) {
-      App.notify(error.message, 'error');
-      button.disabled = false;
-      button.textContent = 'Подать заявку';
-    }
-  }
-
-  function renderStudent() {
-    var assignments = myAssignments();
-    var graded = state.attempts.filter(function (attempt) {
-      return !!state.grades[attempt.id];
-    });
-
-    App.renderCards('dashboard-stats', [
-      { title: 'Мои курсы', value: state.courses.length, subtitle: 'Активные записи' },
-      { title: 'Доступные задания', value: assignments.length, subtitle: 'В ваших курсах' },
-      { title: 'Мои попытки', value: state.attempts.length, subtitle: 'Все прохождения' },
-      { title: 'Средний результат', value: averagePercent(graded), subtitle: 'По проверенным работам' }
-    ]);
-
-    document.getElementById('dashboard-main-title').textContent = 'Мои курсы';
-    document.getElementById('dashboard-main-note').textContent =
-      'Откройте курс, чтобы пройти задания';
-
-    renderTeacherApplication();
-
-    App.renderTable('dashboard-main-table', [
-      {
-        label: 'Курс',
-        render: function (course) {
-          return '<span class="table-title">' + App.escapeHtml(course.title) + '</span>';
+        if (!max) {
+            return null;
         }
-      },
-      {
-        label: 'Преподаватель',
-        render: function (course) {
-          var teacher = App.getUserById(course.teacherId);
-          return App.escapeHtml(teacher ? teacher.fullName : '#' + course.teacherId);
-        }
-      },
-      {
-        label: 'Заданий',
-        render: function (course) {
-          var count = assignments.filter(function (assignment) {
-            return String(assignment.courseId) === String(course.id);
-          }).length;
-          return String(count);
-        }
-      },
-      {
-        label: 'Студентов',
-        key: 'studentsCount'
-      },
-      {
-        label: 'Действие',
-        render: function (course) {
-          return '<a class="btn btn-sm btn-soft" href="' +
-            App.url('course-details.html') + '?id=' + course.id + '">Открыть</a>';
-        }
-      }
-    ], state.courses);
 
-    document.getElementById('dashboard-secondary-title').textContent = 'Последние результаты';
-
-    var recent = state.attempts.slice().sort(function (first, second) {
-      return new Date(second.startedAt || 0) - new Date(first.startedAt || 0);
-    }).slice(0, 6);
-
-    App.renderCards('dashboard-secondary', recent.map(function (attempt) {
-      var assignment = App.getAssignmentById(attempt.assignmentId);
-      var grade = state.grades[attempt.id];
-      return {
-        title: assignment ? assignment.title : 'Задание #' + attempt.assignmentId,
-        subtitle: App.formatDate(attempt.startedAt),
-        meta: [
-          grade ? 'Баллы: ' + grade.score + ' из ' + grade.maxScore
-            : 'Оценка ещё не выставлена',
-          'Статус: ' + App.statusLabel(attempt.status)
-        ],
-        badge: grade ? 'checked' : attempt.status,
-        href: App.url('my-results.html'),
-        hrefLabel: 'Все результаты'
-      };
-    }));
-  }
-
-  function renderTeacher() {
-    var assignments = myAssignments();
-    var attempts = relevantAttempts().slice().sort(function (first, second) {
-      return new Date(second.startedAt || 0) - new Date(first.startedAt || 0);
-    });
-    var pending = attempts.filter(function (attempt) {
-      return !state.grades[attempt.id];
-    });
-    var students = state.users.filter(function (user) {
-      return user.role === 'student';
-    });
-
-    App.renderCards('dashboard-stats', [
-      { title: 'Мои курсы', value: state.courses.length, subtitle: 'Курсы, где вы преподаватель' },
-      { title: 'Мои задания', value: assignments.length, subtitle: 'Задания в ваших курсах' },
-      { title: 'Попытки студентов', value: attempts.length, subtitle: 'По вашим заданиям' },
-      { title: 'Без оценки', value: pending.length, subtitle: 'Ожидают проверки' }
-    ]);
-
-    document.getElementById('dashboard-main-title').textContent = 'Последние работы';
-    document.getElementById('dashboard-main-note').textContent =
-      'Студентов в системе: ' + students.length;
-
-    App.renderTable('dashboard-main-table', [
-      {
-        label: 'Студент',
-        render: function (attempt) {
-          var student = App.getUserById(attempt.studentId);
-          return App.escapeHtml(student ? student.fullName : '#' + attempt.studentId);
-        }
-      },
-      {
-        label: 'Задание',
-        render: function (attempt) {
-          var assignment = App.getAssignmentById(attempt.assignmentId);
-          return App.escapeHtml(assignment ? assignment.title : '#' + attempt.assignmentId);
-        }
-      },
-      {
-        label: 'Начата',
-        render: function (attempt) {
-          return App.formatDate(attempt.startedAt);
-        }
-      },
-      {
-        label: 'Результат',
-        render: function (attempt) {
-          var grade = state.grades[attempt.id];
-          if (!grade) {
-            return App.renderBadge('pending');
-          }
-          return App.escapeHtml(grade.score + ' / ' + grade.maxScore);
-        }
-      },
-      {
-        label: 'Действие',
-        render: function () {
-          return '<a class="btn btn-sm btn-soft" href="' +
-            App.url('grading.html') + '">Проверить</a>';
-        }
-      }
-    ], attempts.slice(0, 8));
-
-    document.getElementById('dashboard-secondary-title').textContent = 'Мои курсы';
-
-    App.renderCards('dashboard-secondary', state.courses.map(function (course) {
-      var count = assignments.filter(function (assignment) {
-        return String(assignment.courseId) === String(course.id);
-      }).length;
-      return {
-        title: course.title,
-        subtitle: 'Заданий: ' + count,
-        meta: [
-          'Студентов: ' + course.studentsCount,
-          'Создан: ' + App.formatDateOnly(course.createdAt)
-        ],
-        href: App.url('course-details.html') + '?id=' + course.id,
-        hrefLabel: 'Открыть курс'
-      };
-    }));
-  }
-
-  function renderAdmin() {
-    var students = state.users.filter(function (user) {
-      return user.role === 'student';
-    });
-    var teachers = state.users.filter(function (user) {
-      return user.role === 'teacher';
-    });
-
-    App.renderCards('dashboard-stats', [
-      { title: 'Пользователей', value: state.users.length, subtitle: 'Все учётные записи' },
-      { title: 'Студентов', value: students.length, subtitle: 'Роль «Студент»' },
-      { title: 'Преподавателей', value: teachers.length, subtitle: 'Роль «Преподаватель»' },
-      { title: 'Курсов', value: state.courses.length, subtitle: 'В каталоге' }
-    ]);
-
-    document.getElementById('dashboard-main-title').textContent = 'Пользователи системы';
-    document.getElementById('dashboard-main-note').textContent =
-      'Полный список доступен в разделе «Пользователи»';
-
-    App.renderTable('dashboard-main-table', [
-      { label: 'ФИО', key: 'fullName' },
-      { label: 'Почта', key: 'email' },
-      {
-        label: 'Роль',
-        render: function (user) {
-          return App.renderBadge(user.role);
-        }
-      },
-      {
-        label: 'Действие',
-        render: function () {
-          return '<a class="btn btn-sm btn-soft" href="' +
-            App.url('admin-users.html') + '">Открыть</a>';
-        }
-      }
-    ], state.users.slice(0, 10));
-
-    document.getElementById('dashboard-secondary-title').textContent = 'Курсы платформы';
-
-    App.renderCards('dashboard-secondary', state.courses.slice(0, 6).map(function (course) {
-      var teacher = App.getUserById(course.teacherId);
-      return {
-        title: course.title,
-        subtitle: teacher ? teacher.fullName : 'Преподаватель #' + course.teacherId,
-        meta: [
-          'Заданий: ' + course.assignmentsCount,
-          'Студентов: ' + course.studentsCount
-        ],
-        href: App.url('analytics.html'),
-        hrefLabel: 'Смотреть аналитику'
-      };
-    }));
-  }
-
-  async function load() {
-    state.role = App.getRole();
-    state.user = App.getUser();
-
-    try {
-      state.users = await App.api.users.lookup();
-    } catch (error) {
-      state.users = [];
+        return Math.round((Number(score) / max) * 100);
     }
 
-    if (state.role === 'student') {
-      state.courses = await App.api.courses.enrolled();
-    } else {
-      var courses = await App.api.courses.list();
-      state.courses = state.role === 'teacher'
-        ? courses.filter(function (course) { return App.sameId(course.teacherId, state.user.id); })
-        : courses;
+    function averagePercent(gradedAttempts) {
+        var values = gradedAttempts.map(function (attempt) {
+            var grade = state.grades[attempt.id];
+
+            return grade ? percent(grade.score, grade.maxScore) : null;
+        }).filter(function (value) {
+            return value !== null;
+        });
+
+        if (!values.length) {
+            return '—';
+        }
+
+        return Math.round(values.reduce(function (sum, value) {
+            return sum + value;
+        }, 0) / values.length) + '%';
     }
 
-    var lists = await Promise.all(state.courses.map(function (course) {
-      return App.api.assignments.list(course.id).catch(function () { return []; });
-    }));
-    state.assignments = [];
-    lists.forEach(function (list) {
-      state.assignments = state.assignments.concat(list);
-    });
-    App.cacheAssignments(state.assignments);
+    function myAssignments() {
+        var courseIds = {};
 
-    state.attempts = await App.api.attempts.list();
-    if (state.role === 'student') {
-      state.attempts = state.attempts.filter(function (attempt) {
-        return String(attempt.studentId) === String(state.user.id);
-      });
-    } else if (state.role === 'teacher') {
-      state.attempts = relevantAttempts();
+        state.courses.forEach(function (course) {
+            courseIds[String(course.id)] = true;
+        });
+
+        return state.assignments.filter(function (assignment) {
+            return courseIds[String(assignment.courseId)];
+        });
     }
 
-    await loadGrades(state.attempts);
+    function relevantAttempts() {
+        if (state.role !== 'teacher') {
+            return state.attempts;
+        }
 
-    if (state.role === 'student') {
-      state.teacherApplication = await App.api.auth.myTeacherApplication()
-        .catch(function () { return null; });
+        var assignmentIds = {};
+
+        myAssignments().forEach(function (assignment) {
+            assignmentIds[String(assignment.id)] = true;
+        });
+
+        return state.attempts.filter(function (attempt) {
+            return assignmentIds[String(attempt.assignmentId)];
+        });
     }
 
-    renderHeading();
-    if (state.role === 'student') {
-      renderStudent();
-    } else if (state.role === 'teacher') {
-      renderTeacher();
-    } else {
-      renderAdmin();
-    }
-  }
+    async function loadGrades(attempts) {
+        state.grades = {};
 
-  function init() {
-    if (!App.requireRole(['student', 'teacher', 'admin'])) {
-      return;
+        await Promise.all(attempts.map(async function (attempt) {
+            try {
+                state.grades[attempt.id] =
+                    await App.api.grades.byAttempt(attempt.id);
+            } catch (error) {
+                state.grades[attempt.id] = null;
+            }
+        }));
     }
 
-    var user = App.getUser();
-    if (!user) {
-      location.href = App.url('login.html');
-      return;
+    function renderHeading() {
+        var subtitle = document.getElementById('dashboard-subtitle');
+        var actions = document.getElementById('dashboard-actions');
+
+        if (!subtitle || !actions) {
+            return;
+        }
+
+        subtitle.textContent = 'Здравствуйте, ' + state.user.fullName +
+            '. Сводка по вашей роли в системе онлайн-тестирования.';
+
+        if (state.role === 'student') {
+            actions.innerHTML = '<a class="btn btn-primary" href="' +
+                App.url('courses.html') + '">Перейти к курсам</a>';
+        } else if (state.role === 'teacher') {
+            actions.innerHTML = '<a class="btn btn-primary" href="' +
+                App.url('test-editor.html') + '">Создать тест</a>';
+        } else {
+            actions.innerHTML = '<a class="btn btn-primary" href="' +
+                App.url('admin-users.html') + '">Управление пользователями</a>';
+        }
     }
 
-    load().catch(function (error) {
-      App.showError('dashboard-main-table', error);
-    });
-  }
+    // Заявка студента на получение роли преподавателя
+    async function renderTeacherApplication() {
+        var container = document.getElementById('teacher-application');
 
-  init();
+        if (!container) {
+            console.error('Элемент #teacher-application не найден в DOM!');
+            return;
+        }
+
+        if (state.role !== 'student') {
+            container.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'block';
+        var application = null;
+
+        try {
+            // Пытаемся получить заявку из API
+            if (App.api && App.api.users && typeof App.api.users.myTeacherApplication === 'function') {
+                application = await App.api.users.myTeacherApplication();
+                state.teacherApplication = application;
+            }
+        } catch (error) {
+            console.warn('Заявка не найдена или метод еще не реализован на бэкенде:', error);
+        }
+
+        // Рендерим в зависимости от статуса
+        if (application && (application.status === 0 || application.status === 'Pending')) {
+            container.innerHTML =
+                '<h3>Заявка на преподавательство</h3>' +
+                '<p>Ваша заявка отправлена и ожидает рассмотрения администратором.</p>' +
+                '<span class="badge pending">Ожидание</span>';
+            return;
+        }
+
+        if (application && (application.status === 1 || application.status === 'Approved')) {
+            container.innerHTML =
+                '<h3>Заявка одобрена!</h3>' +
+                '<p>Теперь вы можете пользоваться возможностями преподавателя. Войдите заново, чтобы обновить роль.</p>';
+            return;
+        }
+
+        // Если заявки нет — рисуем кнопку подачи
+        container.innerHTML =
+            '<h3>Стать преподавателем</h3>' +
+            '<p>Отправьте заявку администратору, чтобы получить роль преподавателя.</p>' +
+            '<button class="btn btn-primary" type="button" id="apply-teacher-btn">Подать заявку</button>';
+
+        var button = document.getElementById('apply-teacher-btn');
+        if (button) {
+            button.addEventListener('click', async function () {
+                button.disabled = true;
+                try {
+                    if (App.api && App.api.users && typeof App.api.users.applyForTeacher === 'function') {
+                        await App.api.users.applyForTeacher();
+                    } else {
+                        // Заглушка на случай, если эндпоинт на бэкенде еще не прописан во фронте
+                        await App.request('/users/teacher-applications', { method: 'POST' });
+                    }
+                    alert('Заявка успешно отправлена!');
+                    await renderTeacherApplication();
+                } catch (error) {
+                    alert('Ошибка: ' + (error.message || error));
+                    button.disabled = false;
+                }
+            });
+        }
+    }
+
+    function renderStudent() {
+        var assignments = myAssignments();
+
+        var graded = state.attempts.filter(function (attempt) {
+            return !!state.grades[attempt.id];
+        });
+
+        App.renderCards('dashboard-stats', [
+            {
+                title: 'Мои курсы',
+                value: state.courses.length,
+                subtitle: 'Активные записи'
+            },
+            {
+                title: 'Доступные тесты',
+                value: assignments.length,
+                subtitle: 'В ваших курсах'
+            },
+            {
+                title: 'Мои попытки',
+                value: state.attempts.length,
+                subtitle: 'Все прохождения'
+            },
+            {
+                title: 'Средний результат',
+                value: averagePercent(graded),
+                subtitle: 'По проверенным работам'
+            }
+        ]);
+
+        document.getElementById('dashboard-main-title').textContent =
+            'Мои курсы';
+
+        document.getElementById('dashboard-main-note').textContent =
+            'Откройте курс, чтобы пройти тесты';
+
+        App.renderTable('dashboard-main-table', [
+            {
+                label: 'Курс',
+                render: function (course) {
+                    return '<span class="table-title">' +
+                        App.escapeHtml(course.title) +
+                        '</span>';
+                }
+            },
+            {
+                label: 'Преподаватель',
+                render: function (course) {
+                    var teacher = App.getUserById(course.teacherId);
+
+                    return App.escapeHtml(
+                        teacher ? teacher.fullName : '#' + course.teacherId
+                    );
+                }
+            },
+            {
+                label: 'Тестов',
+                render: function (course) {
+                    var count = assignments.filter(function (assignment) {
+                        return String(assignment.courseId) === String(course.id);
+                    }).length;
+
+                    return String(count);
+                }
+            },
+            {
+                label: 'Студентов',
+                key: 'studentsCount'
+            },
+            {
+                label: 'Действие',
+                render: function (course) {
+                    return '<a class="btn btn-sm btn-soft" href="' +
+                        App.url('course-details.html') + '?id=' +
+                        course.id + '">Открыть</a>';
+                }
+            }
+        ], state.courses);
+
+        document.getElementById('dashboard-secondary-title').textContent =
+            'Последние результаты';
+
+        var recent = state.attempts.slice().sort(function (first, second) {
+            return new Date(second.startedAt || 0) -
+                new Date(first.startedAt || 0);
+        }).slice(0, 6);
+
+        App.renderCards('dashboard-secondary', recent.map(function (attempt) {
+            var assignment = App.getAssignmentById(attempt.assignmentId);
+            var grade = state.grades[attempt.id];
+
+            return {
+                title: assignment
+                    ? assignment.title
+                    : 'Задание #' + attempt.assignmentId,
+                subtitle: App.formatDate(attempt.startedAt),
+                meta: [
+                    grade
+                        ? 'Баллы: ' + grade.score + ' из ' + grade.maxScore
+                        : 'Оценка ещё не выставлена',
+                    'Статус: ' + App.statusLabel(attempt.status)
+                ],
+                badge: grade ? 'checked' : attempt.status,
+                href: App.url('my-results.html'),
+                hrefLabel: 'Все результаты'
+            };
+        }));
+    }
+
+    function renderTeacher() {
+        var assignments = myAssignments();
+
+        var attempts = relevantAttempts().slice().sort(function (first, second) {
+            return new Date(second.startedAt || 0) -
+                new Date(first.startedAt || 0);
+        });
+
+        var pending = attempts.filter(function (attempt) {
+            return !state.grades[attempt.id];
+        });
+
+        var students = state.users.filter(function (user) {
+            return user.role === 'student';
+        });
+
+        App.renderCards('dashboard-stats', [
+            {
+                title: 'Мои курсы',
+                value: state.courses.length,
+                subtitle: 'Курсы, где вы преподаватель'
+            },
+            {
+                title: 'Мои тесты',
+                value: assignments.length,
+                subtitle: 'Задания в ваших курсах'
+            },
+            {
+                title: 'Попытки студентов',
+                value: attempts.length,
+                subtitle: 'По вашим тестам'
+            },
+            {
+                title: 'Без оценки',
+                value: pending.length,
+                subtitle: 'Ожидают проверки'
+            }
+        ]);
+
+        document.getElementById('dashboard-main-title').textContent =
+            'Последние работы';
+
+        document.getElementById('dashboard-main-note').textContent =
+            'Студентов в системе: ' + students.length;
+
+        App.renderTable('dashboard-main-table', [
+            {
+                label: 'Студент',
+                render: function (attempt) {
+                    var student = App.getUserById(attempt.studentId);
+
+                    return App.escapeHtml(
+                        student ? student.fullName : '#' + attempt.studentId
+                    );
+                }
+            },
+            {
+                label: 'Тест',
+                render: function (attempt) {
+                    var assignment = App.getAssignmentById(attempt.assignmentId);
+
+                    return App.escapeHtml(
+                        assignment ? assignment.title : '#' + attempt.assignmentId
+                    );
+                }
+            },
+            {
+                label: 'Начата',
+                render: function (attempt) {
+                    return App.formatDate(attempt.startedAt);
+                }
+            },
+            {
+                label: 'Результат',
+                render: function (attempt) {
+                    var grade = state.grades[attempt.id];
+
+                    if (!grade) {
+                        return App.renderBadge('pending');
+                    }
+
+                    return App.escapeHtml(
+                        grade.score + ' / ' + grade.maxScore
+                    );
+                }
+            },
+            {
+                label: 'Действие',
+                render: function () {
+                    return '<a class="btn btn-sm btn-soft" href="' +
+                        App.url('grading.html') + '">Проверить</a>';
+                }
+            }
+        ], attempts.slice(0, 8));
+
+        document.getElementById('dashboard-secondary-title').textContent =
+            'Мои курсы';
+
+        App.renderCards('dashboard-secondary', state.courses.map(function (course) {
+            var count = assignments.filter(function (assignment) {
+                return String(assignment.courseId) === String(course.id);
+            }).length;
+
+            return {
+                title: course.title,
+                subtitle: 'Тестов: ' + count,
+                meta: [
+                    'Студентов: ' + course.studentsCount,
+                    'Создан: ' + App.formatDateOnly(course.createdAt)
+                ],
+                href: App.url('course-details.html') + '?id=' + course.id,
+                hrefLabel: 'Открыть курс'
+            };
+        }));
+    }
+
+    function renderAdmin() {
+        var students = state.users.filter(function (user) {
+            return user.role === 'student';
+        });
+
+        var teachers = state.users.filter(function (user) {
+            return user.role === 'teacher';
+        });
+
+        App.renderCards('dashboard-stats', [
+            {
+                title: 'Пользователей',
+                value: state.users.length,
+                subtitle: 'Все учётные записи'
+            },
+            {
+                title: 'Студентов',
+                value: students.length,
+                subtitle: 'Роль «Студент»'
+            },
+            {
+                title: 'Преподавателей',
+                value: teachers.length,
+                subtitle: 'Роль «Преподаватель»'
+            },
+            {
+                title: 'Курсов',
+                value: state.courses.length,
+                subtitle: 'В каталоге'
+            }
+        ]);
+
+        document.getElementById('dashboard-main-title').textContent =
+            'Пользователи системы';
+
+        document.getElementById('dashboard-main-note').textContent =
+            'Полный список доступен в разделе «Пользователи»';
+
+        App.renderTable('dashboard-main-table', [
+            {
+                label: 'ФИО',
+                key: 'fullName'
+            },
+            {
+                label: 'Почта',
+                key: 'email'
+            },
+            {
+                label: 'Роль',
+                render: function (user) {
+                    return App.renderBadge(user.role);
+                }
+            },
+            {
+                label: 'Действие',
+                render: function () {
+                    return '<a class="btn btn-sm btn-soft" href="' +
+                        App.url('admin-users.html') + '">Открыть</a>';
+                }
+            }
+        ], state.users.slice(0, 10));
+
+        document.getElementById('dashboard-secondary-title').textContent =
+            'Курсы платформы';
+
+        App.renderCards('dashboard-secondary', state.courses.slice(0, 6).map(function (course) {
+            var teacher = App.getUserById(course.teacherId);
+
+            return {
+                title: course.title,
+                subtitle: teacher
+                    ? teacher.fullName
+                    : 'Преподаватель #' + course.teacherId,
+                meta: [
+                    'Тестов: ' + course.assignmentsCount,
+                    'Студентов: ' + course.studentsCount
+                ],
+                href: App.url('analytics.html'),
+                hrefLabel: 'Смотреть аналитику'
+            };
+        }));
+    }
+
+    // Загрузка данных дашборда
+    async function load() {
+        state.role = App.getRole();
+        state.user = App.getUser();
+
+        try {
+            state.users = await App.api.users.lookup();
+        } catch (error) {
+            state.users = [];
+        }
+
+        if (state.role === 'student') {
+            state.courses = await App.api.courses.enrolled();
+        } else {
+            var courses = await App.api.courses.list();
+
+            state.courses = state.role === 'teacher'
+                ? courses.filter(function (course) {
+                    return App.sameId(course.teacherId, state.user.id);
+                })
+                : courses;
+        }
+
+        // Загружаем задания
+        var lists = await Promise.all(state.courses.map(function (course) {
+            return App.api.assignments.list(course.id)
+                .catch(function () {
+                    return [];
+                });
+        }));
+
+        state.assignments = [];
+
+        lists.forEach(function (list) {
+            state.assignments = state.assignments.concat(list);
+        });
+
+        App.cacheAssignments(state.assignments);
+
+        // Загружаем попытки
+        state.attempts = await App.api.attempts.list();
+
+        if (state.role === 'student') {
+            state.attempts = state.attempts.filter(function (attempt) {
+                return String(attempt.studentId) === String(state.user.id);
+            });
+        } else if (state.role === 'teacher') {
+            state.attempts = relevantAttempts();
+        }
+
+        // Загружаем оценки
+        await loadGrades(state.attempts);
+
+        // Отрисовываем заголовок
+        renderHeading();
+
+        // Отрисовываем дашборд в зависимости от роли
+        if (state.role === 'student') {
+            renderStudent();
+            await renderTeacherApplication();
+        } else if (state.role === 'teacher') {
+            renderTeacher();
+        } else {
+            renderAdmin();
+        }
+    }
+
+    function init() {
+        if (!App.requireRole(['student', 'teacher', 'admin'])) {
+            return;
+        }
+
+        var user = App.getUser();
+
+        if (!user) {
+            location.href = App.url('login.html');
+            return;
+        }
+
+        load().catch(function (error) {
+            App.showError('dashboard-main-table', error);
+            console.error('Ошибка загрузки дашборда:', error);
+        });
+    }
+
+    init();
 })();

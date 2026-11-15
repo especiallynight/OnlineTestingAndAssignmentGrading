@@ -144,7 +144,6 @@ namespace AnalyticsService.Controllers
 
             await _analyticsDbContext.SaveChangesAsync();
 
-            // Сводка по курсу изменилась — сбрасываем кэш.
             await _cache.RemoveAsync($"analytics:course:{dto.CourseId}");
 
             return Ok();

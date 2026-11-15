@@ -81,8 +81,7 @@ public class ExamControllerTests
         Assert.Equal(ExamAttemptStatus.InProgress, dto.Status);
     }
 
-    // Повторный запуск незавершённой попытки продолжает её, а не создаёт новую
-    // и не сбрасывает дедлайн.
+    // Повторный запуск незавершённой попытки продолжает её, а не создаёт новую и не сбрасывает дедлайн.
     [Fact]
     public async Task StartAttempt_WhenAlreadyInProgress_ContinuesWithoutResettingDeadline()
     {

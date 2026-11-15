@@ -44,13 +44,104 @@
   }
 
   // Отображает карточки курсов и их количество.
-  function renderCourses() {
-    var courses = getFilteredCourses();
-    var count = document.getElementById('courses-count');
-    if (count) {
-      count.textContent = 'Найдено курсов: ' + courses.length;
+
+    // Отображает карточки курсов и их количество.
+    function renderCourses() {
+        var courses = getFilteredCourses();
+        var count = document.getElementById('courses-count');
+
+        if (count) {
+            count.textContent = 'Найдено курсов: ' + courses.length;
+        }
+
+        App.renderCards('courses-grid', courses.map(function (course) {
+            var teacher = App.getUserById(course.teacherId);
+
+            return {
+                title: course.title,
+                subtitle: teacher ? teacher.fullName : 'Преподаватель #' + course.teacherId,
+                text: course.description || 'Описание не заполнено.',
+                badge: 'active',
+                meta: [
+                    'Тестов: ' + course.assignmentsCount,
+                    'Студентов: ' + course.studentsCount,
+                    'Создан: ' + App.formatDateOnly(course.createdAt)
+                ],
+                href: App.url('course-details.html') + '?id=' + course.id,
+                hrefLabel: 'Открыть курс'
+            };
+        }));
+
+        // Кнопка удаления показывается только учителю и только у его курсов.
+        if (App.getRole() !== 'teacher') {
+            return;
+        }
+
+        var currentUser = App.getUser();
+
+        if (!currentUser) {
+            return;
+        }
+
+        var cards = document.querySelectorAll('#courses-grid article.card');
+
+        courses.forEach(function (course, index) {
+            if (!App.sameId(course.teacherId, currentUser.id)) {
+                return;
+            }
+
+            var card = cards[index];
+
+            if (!card) {
+                return;
+            }
+
+            var button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn btn-outline';
+            button.textContent = 'Удалить курс';
+
+            button.addEventListener('click', function () {
+                deleteCourse(course);
+            });
+
+            card.appendChild(button);
+        });
     }
 
+    // Удаляет курс после подтверждения.
+    async function deleteCourse(course) {
+        var confirmed = window.confirm(
+            'Вы действительно хотите удалить курс "' + course.title +
+            '"? Все связанные с ним задания и материалы также могут быть удалены.'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            await App.api.courses.remove(course.id);
+
+            allCourses = allCourses.filter(function (item) {
+                return !App.sameId(item.id, course.id);
+            });
+
+            renderCourses();
+
+            App.notify('Курс успешно удалён', 'success');
+
+            await loadCourses();
+
+        } catch (error) {
+            App.notify(
+                'Не удалось удалить курс: ' + error.message,
+                'error'
+            );
+        }
+    }
+
+<<<<<<< HEAD
     App.renderCards('courses-grid', courses.map(function (course) {
       var teacher = App.getUserById(course.teacherId);
       return {
@@ -68,6 +159,8 @@
       };
     }));
   }
+=======
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
 
   // Открывает форму создания курса.
   function openCreateCourse() {

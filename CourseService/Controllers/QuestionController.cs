@@ -64,8 +64,7 @@ namespace CourseService.Controllers
                 })
                 .ToListAsync();
 
-            // Студент видит только примеры (первые тесты), а полный набор
-            // тестов остаётся скрытым и используется автопроверкой.
+
             var payload = questions.Select(question => new QuestionCacheItem(
                 question.question_id,
                 question.assignment_id,
@@ -96,7 +95,6 @@ namespace CourseService.Controllers
             return JsonDocument.Parse(json).RootElement.Clone();
         }
 
-        // Полные данные вопросов (с правильными ответами) для редактора преподавателя.
         [Authorize(Roles = "Teacher")]
         [HttpGet("manage")]
         public async Task<ActionResult> GetQuestionsForEditing(int assignment_id)

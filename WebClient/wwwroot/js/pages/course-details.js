@@ -13,7 +13,10 @@
         assignments: [],
         materials: [],
         questionsCount: {},
+<<<<<<< HEAD
         questionsByAssignment: {},
+=======
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
         role: null,
         user: null,
         enrolled: false,
@@ -31,6 +34,7 @@
         return state.attempts[assignmentId] || null;
     }
 
+<<<<<<< HEAD
     // Вопросы выбранного задания.
     function assignmentQuestions(assignmentId) {
         return state.questionsByAssignment[assignmentId] || [];
@@ -57,11 +61,164 @@
     // Шапка курса.
     function renderHero() {
         var container = document.getElementById('course-hero');
+=======
+    // Проверяет, является ли пользователь преподавателем-владельцем курса.
+    function canEditCourse() {
+        return state.role === 'teacher' &&
+            state.user &&
+            state.course &&
+            String(state.course.teacherId) === String(state.user.id);
+    }
+
+    // Шапка курса.
+    function renderHero() {
+        var container = document.getElementById('course-hero');
 
         if (!container) {
             return;
         }
 
+        var course = state.course;
+        var teacher = App.getUserById(course.teacherId);
+        var action = '';
+        if (canEditCourse()) { action = '<button class="btn btn-outline" type="button" id="course-action-btn">Редактировать курс</button>' +
+                    '<button class="btn btn-danger-soft" type="button" id="delete-course-btn">Удалить курс</button>';
+            }
+    
+        else if (state.role === 'student') {
+            action = state.enrolled
+                ? '<button class="btn btn-danger-soft" type="button" id="course-action-btn">Отписаться от курса</button>'
+                : '<button class="btn btn-primary" type="button" id="course-action-btn">Записаться на курс</button>';
+        }
+
+        container.innerHTML =
+            '<div class="flex-between">' +
+            '<div>' +
+            '<span class="pill">' + App.escapeHtml(App.statusLabel('active')) + '</span>' +
+            '<h2 class="section-title">' + App.escapeHtml(course.title) + '</h2>' +
+            '<p class="muted">' + App.escapeHtml(course.description || 'Описание не заполнено.') + '</p>' +
+            '</div>' +
+            '<div class="form-actions">' + action + '</div>' +
+            '</div>' +
+            '<div class="course-meta">' +
+            '<span>Преподаватель: ' +
+            App.escapeHtml(teacher ? teacher.fullName : '#' + course.teacherId) +
+            '</span>' +
+            '<span>Заданий: ' + state.assignments.length + '</span>' +
+            '<span>Студентов: ' + course.studentsCount + '</span>' +
+            '<span>Создан: ' + App.formatDateOnly(course.createdAt) + '</span>' +
+            '</div>';
+
+
+        var button = document.getElementById('course-action-btn');
+
+        if (button) {
+            if (state.role === 'teacher') {
+                button.addEventListener('click', openCourseEditor);
+            } else {
+                button.addEventListener('click', toggleEnrollment);
+            }
+        }
+
+        var deleteButton = document.getElementById('delete-course-btn');
+
+        if (deleteButton) {
+            deleteButton.addEventListener('click', function () {
+                deleteCourse();
+            });
+        }
+    }
+
+    // Редактирование курса.
+    function openCourseEditor() {
+        App.openModal({
+            title: 'Редактирование курса',
+            submitLabel: 'Сохранить',
+            body:
+                '<div class="form-field">' +
+                '<label for="edit-course-name">Название</label>' +
+                '<input id="edit-course-name" name="name" type="text" minlength="3" maxlength="100" required value="' +
+                App.escapeHtml(state.course.title) + '">' +
+                '</div>' +
+                '<div class="form-field">' +
+                '<label for="edit-course-description">Описание</label>' +
+                '<textarea id="edit-course-description" name="description" maxlength="150" rows="4">' +
+                App.escapeHtml(state.course.description || '') +
+                '</textarea>' +
+                '</div>',
+            onSubmit: async function (form) {
+                var values = App.formValues(form);
+
+                await App.api.courses.update(state.course.id, {
+                    name: values.name.trim(),
+                    description: values.description.trim()
+                });
+
+                App.notify('Курс обновлён', 'success');
+                await load();
+            }
+        });
+    }
+
+    // Запись студента на курс или отмена записи.
+    async function toggleEnrollment() {
+        var button = document.getElementById('course-action-btn');
+
+        if (button) {
+            button.disabled = true;
+        }
+
+        try {
+            if (state.enrolled) {
+                await App.api.courses.unenroll(state.course.id);
+                App.notify('Вы отписались от курса', 'success');
+            } else {
+                await App.api.courses.enroll(state.course.id);
+                App.notify('Вы записаны на курс', 'success');
+            }
+
+            await load();
+        } catch (error) {
+            App.notify(error.message, 'error');
+
+            if (button) {
+                button.disabled = false;
+            }
+        }
+    }
+
+    // Экранирует текст и превращает пустые строки в абзацы.
+    function renderTheoryText(content, maxLength) {
+        var text = String(content || '');
+
+        if (maxLength && text.length > maxLength) {
+            text = text.slice(0, maxLength).replace(/\s+\S*$/, '') + '…';
+        }
+
+        return text.split(/\n{2,}/).map(function (paragraph) {
+            return '<p>' +
+                App.escapeHtml(paragraph).replace(/\n/g, '<br>') +
+                '</p>';
+        }).join('');
+    }
+
+    function findMaterial(id) {
+        return state.materials.find(function (material) {
+            return String(material.id) === String(id);
+        }) || null;
+    }
+
+    // Отображение теории курса.
+    function renderTheory() {
+        var container = document.getElementById('course-theory');
+        var actions = document.getElementById('course-theory-actions');
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
+
+        if (!container) {
+            return;
+        }
+
+<<<<<<< HEAD
         var course = state.course;
         var teacher = App.getUserById(course.teacherId);
         var action = '';
@@ -327,6 +484,142 @@
         });
     }
 
+=======
+        if (actions) {
+            actions.innerHTML = canEditCourse()
+                ? '<button class="btn btn-sm btn-primary" type="button" id="add-material-btn">Добавить материал</button>'
+                : '';
+
+            var addButton = document.getElementById('add-material-btn');
+
+            if (addButton) {
+                addButton.addEventListener('click', function () {
+                    openMaterialEditor(null);
+                });
+            }
+        }
+
+        if (!state.materials.length) {
+            container.innerHTML =
+                '<div class="empty-state"><p class="muted">' +
+                (canEditCourse()
+                    ? 'Теория пока не добавлена. Нажмите «Добавить материал».'
+                    : 'В курсе пока нет материалов.') +
+                '</p></div>';
+
+            return;
+        }
+
+        container.innerHTML = state.materials.map(function (material, index) {
+            var controls = canEditCourse()
+                ? '<div class="theory-actions">' +
+                '<button class="btn btn-sm btn-outline" type="button" data-edit="' +
+                material.id + '">Редактировать</button>' +
+                '<button class="btn btn-sm btn-danger-soft" type="button" data-delete="' +
+                material.id + '">Удалить</button>' +
+                '</div>'
+                : '';
+
+            return '<article class="theory-card">' +
+                '<div class="theory-head">' +
+                '<span class="module-number">' + (index + 1) + '</span>' +
+                '<h3>' + App.escapeHtml(material.title) + '</h3>' +
+                '</div>' +
+                '<div class="theory-preview">' +
+                renderTheoryText(material.content, 280) +
+                '</div>' +
+                '<div class="theory-foot">' +
+                '<button class="btn btn-sm btn-soft" type="button" data-read="' +
+                material.id + '">Читать</button>' +
+                controls +
+                '</div>' +
+                '</article>';
+        }).join('');
+
+        Array.prototype.forEach.call(container.querySelectorAll('[data-read]'), function (button) {
+            button.addEventListener('click', function () {
+                openMaterialReader(findMaterial(button.getAttribute('data-read')));
+            });
+        });
+
+        Array.prototype.forEach.call(container.querySelectorAll('[data-edit]'), function (button) {
+            button.addEventListener('click', function () {
+                openMaterialEditor(findMaterial(button.getAttribute('data-edit')));
+            });
+        });
+
+        Array.prototype.forEach.call(container.querySelectorAll('[data-delete]'), function (button) {
+            button.addEventListener('click', function () {
+                removeMaterial(findMaterial(button.getAttribute('data-delete')));
+            });
+        });
+    }
+
+    // Чтение материала.
+    function openMaterialReader(material) {
+        if (!material) {
+            return;
+        }
+
+        App.openModal({
+            title: material.title,
+            submitLabel: 'Закрыть',
+            body: '<div class="theory-content">' +
+                renderTheoryText(material.content) +
+                '</div>',
+            onSubmit: function () {
+                return Promise.resolve();
+            }
+        });
+    }
+
+    // Создание или редактирование материала.
+    function openMaterialEditor(material) {
+        App.openModal({
+            title: material ? 'Редактирование материала' : 'Новый материал',
+            submitLabel: material ? 'Сохранить' : 'Добавить',
+            body:
+                '<div class="form-field">' +
+                '<label for="material-title">Заголовок</label>' +
+                '<input id="material-title" name="title" type="text" minlength="3" maxlength="150" required value="' +
+                App.escapeHtml(material ? material.title : '') + '">' +
+                '</div>' +
+                '<div class="form-field">' +
+                '<label for="material-content">Текст материала</label>' +
+                '<textarea id="material-content" name="content" rows="12" minlength="10" maxlength="20000" required>' +
+                App.escapeHtml(material ? material.content : '') +
+                '</textarea>' +
+                '<p class="form-hint">Пустая строка разделяет абзацы. HTML-теги выводятся как текст.</p>' +
+                '</div>' +
+                '<div class="form-field">' +
+                '<label for="material-order">Порядок</label>' +
+                '<input id="material-order" name="sortOrder" type="number" min="0" max="1000" value="' +
+                (material ? material.sortOrder : state.materials.length + 1) + '">' +
+                '</div>',
+            onSubmit: async function (form) {
+                var values = App.formValues(form);
+
+                var payload = {
+                    title: values.title.trim(),
+                    content: values.content.trim(),
+                    sortOrder: parseInt(values.sortOrder, 10) || 0
+                };
+
+                if (material) {
+                    await App.api.materials.update(state.course.id, material.id, payload);
+                    App.notify('Материал обновлён', 'success');
+                } else {
+                    await App.api.materials.create(state.course.id, payload);
+                    App.notify('Материал добавлен', 'success');
+                }
+
+                await loadMaterials();
+                renderTheory();
+            }
+        });
+    }
+
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
     // Удаление материала.
     async function removeMaterial(material) {
         if (!material) {
@@ -490,6 +783,7 @@
     }
 
     // HTML строки тестового случая для задачи на программирование.
+<<<<<<< HEAD
     // Каждое поле обёрнуто в .form-field, чтобы подпись стояла над своим
     // полем, а кнопка удаления была справа и не ломала сетку.
     function renderTestCaseRow(testCase) {
@@ -497,18 +791,31 @@
 
         return '<div class="test-case-row" data-test-case>' +
             '<div class="form-field">' +
+=======
+    function renderTestCaseRow(testCase) {
+        testCase = testCase || {};
+
+        return '<div class="test-case-row form-field">' +
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
             '<label>Входные данные</label>' +
             '<textarea name="testInput" rows="2">' +
             App.escapeHtml(testCase.input || '') +
             '</textarea>' +
+<<<<<<< HEAD
             '</div>' +
             '<div class="form-field">' +
+=======
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
             '<label>Ожидаемый результат</label>' +
             '<textarea name="expectedOutput" rows="2" required>' +
             App.escapeHtml(testCase.expectedOutput || '') +
             '</textarea>' +
+<<<<<<< HEAD
             '</div>' +
             '<button type="button" class="btn btn-sm btn-danger-soft" data-remove-case>Удалить</button>' +
+=======
+            '<button type="button" class="btn btn-sm btn-danger-soft" data-remove-case>Удалить тестовый случай</button>' +
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
             '</div>';
     }
 
@@ -565,12 +872,19 @@
 
             body +=
                 '<p class="muted small">Добавьте входные данные и ожидаемый результат для каждого тестового случая.</p>' +
+<<<<<<< HEAD
                 '<div class="test-case-list" id="question-test-cases">' +
                 cases.map(renderTestCaseRow).join('') +
                 '</div>' +
                 '<div class="test-case-actions">' +
                 '<button type="button" class="btn btn-sm btn-outline" id="add-test-case">Добавить тестовый случай</button>' +
                 '</div>';
+=======
+                '<div id="question-test-cases">' +
+                cases.map(renderTestCaseRow).join('') +
+                '</div>' +
+                '<button type="button" class="btn btn-sm btn-outline" id="add-test-case">Добавить тестовый случай</button>';
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
         }
 
         App.openModal({
@@ -645,18 +959,24 @@
 
         try {
             state.questions = await App.api.questions.manage(state.selectedTest.id);
+<<<<<<< HEAD
             state.questionsByAssignment[state.selectedTest.id] = state.questions;
+=======
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
             state.questionsCount[state.selectedTest.id] = state.questions.length;
 
             renderCourseTestEditor();
             renderAssignments();
             renderTests();
+<<<<<<< HEAD
 
             // Редактор находится ниже списка заданий, поэтому прокручиваем
             // к нему: иначе клик по «Редактировать» выглядит как бездействие.
             if (editor) {
                 editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
+=======
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
         } catch (error) {
             App.notify(error.message, 'error');
         }
@@ -695,7 +1015,11 @@
         }
 
         editor.hidden = false;
+<<<<<<< HEAD
         title.textContent = 'Редактор задания: ' + state.selectedTest.title;
+=======
+        title.textContent = 'Редактор теста: ' + state.selectedTest.title;
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
 
         settings.innerHTML =
             '<form id="course-test-settings-form">' +
@@ -729,7 +1053,11 @@
 
         if (!state.questions.length) {
             questions.innerHTML =
+<<<<<<< HEAD
                 '<div class="empty-state"><p class="muted">В этом задании пока нет вопросов.</p></div>';
+=======
+                '<div class="empty-state"><p class="muted">В этом тесте пока нет вопросов.</p></div>';
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
         } else {
             questions.innerHTML = state.questions.map(function (question, index) {
                 var answerHtml = '';
@@ -832,7 +1160,11 @@
             });
         });
     }
+<<<<<<< HEAD
     // Отображение заданий на код (все вопросы задания имеют тип Code).
+=======
+    // Отображение заданий курса.
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
     function renderAssignments() {
         var container = document.getElementById('course-modules');
 
@@ -840,6 +1172,7 @@
             return;
         }
 
+<<<<<<< HEAD
         var codeAssignments = state.assignments.filter(function (assignment) {
             return isCodeAssignment(assignment.id);
         });
@@ -856,6 +1189,16 @@
 
         container.innerHTML = codeAssignments.map(function (assignment, index) {
             var questions = assignmentQuestions(assignment.id).length;
+=======
+        if (!state.assignments.length) {
+            container.innerHTML =
+                '<div class="empty-state"><p class="muted">В курсе пока нет заданий.</p></div>';
+            return;
+        }
+
+        container.innerHTML = state.assignments.map(function (assignment, index) {
+            var questions = state.questionsCount[assignment.id] || 0;
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
             var action;
 
             if (canEditCourse()) {
@@ -868,17 +1211,29 @@
                 if (attempt && (attempt.status === 'completed' || attempt.status === 'expired')) {
                     action = '<span class="muted small">' +
                         (attempt.status === 'completed'
+<<<<<<< HEAD
                             ? 'Задание выполнено'
+=======
+                            ? 'Тест пройден'
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
                             : 'Время попытки истекло') +
                         '</span>';
                 } else {
                     action = '<a class="btn btn-sm btn-soft" href="' +
                         App.url('test-taking.html') + '?id=' + assignment.id + '">' +
+<<<<<<< HEAD
                         (attempt ? 'Продолжить задание' : 'Начать задание') +
                         '</a>';
                 }
             } else {
                 action = '<span class="muted small">Запишитесь на курс, чтобы выполнить задание</span>';
+=======
+                        (attempt ? 'Продолжить тест' : 'Начать тест') +
+                        '</a>';
+                }
+            } else {
+                action = '<span class="muted small">Запишитесь на курс, чтобы пройти тест</span>';
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
             }
 
             return '<article class="module-card">' +
@@ -892,7 +1247,11 @@
                 '</div>' +
                 '</div>' +
                 '<div class="course-meta">' +
+<<<<<<< HEAD
                 '<span>Задач: ' + questions + '</span>' +
+=======
+                '<span>Вопросов: ' + questions + '</span>' +
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
                 '<span>Максимум баллов: ' + assignment.maxScore + '</span>' +
                 '<span>Время: ' + assignment.timeLimitMinutes + ' мин</span>' +
                 '</div>' +
@@ -926,6 +1285,7 @@
             }
         }
 
+<<<<<<< HEAD
         var tests = state.assignments.filter(function (assignment) {
             return !isCodeAssignment(assignment.id);
         });
@@ -936,15 +1296,24 @@
                 App.plural(assignment.timeLimitMinutes, 'минута', 'минуты', 'минут') +
                 ' · ' + questions + ' ' +
                 App.plural(questions, 'вопрос', 'вопроса', 'вопросов');
+=======
+        App.renderCards('course-tests', state.assignments.map(function (assignment) {
+            var subtitle = assignment.timeLimitMinutes + ' минут · ' +
+                (state.questionsCount[assignment.id] || 0) + ' вопросов';
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
 
             var href = '';
             var hrefLabel = '';
 
+<<<<<<< HEAD
             if (canEditCourse()) {
                 href = App.url('course-details.html') + '?id=' + state.course.id +
                     '&edit=' + assignment.id;
                 hrefLabel = 'Редактировать тест';
             } else if (state.role === 'student' && state.enrolled) {
+=======
+            if (state.role === 'student' && state.enrolled) {
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
                 var attempt = latestAttempt(assignment.id);
 
                 if (attempt && (attempt.status === 'completed' || attempt.status === 'expired')) {
@@ -1046,15 +1415,23 @@
         }
 
         state.questionsCount = {};
+<<<<<<< HEAD
         state.questionsByAssignment = {};
+=======
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
 
         await Promise.all(state.assignments.map(async function (assignment) {
             try {
                 var questions = await App.api.questions.list(assignment.id);
+<<<<<<< HEAD
                 state.questionsByAssignment[assignment.id] = questions;
                 state.questionsCount[assignment.id] = questions.length;
             } catch (error) {
                 state.questionsByAssignment[assignment.id] = [];
+=======
+                state.questionsCount[assignment.id] = questions.length;
+            } catch (error) {
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
                 state.questionsCount[assignment.id] = 0;
             }
         }));
@@ -1079,16 +1456,45 @@
 
         try {
             await load();
+<<<<<<< HEAD
 
             var editId = App.getQueryParam('edit');
 
             if (editId && canEditCourse()) {
                 await selectCourseTest(editId);
             }
+=======
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
         } catch (error) {
             App.showError('course-hero', error);
         }
     }
 
+<<<<<<< HEAD
+=======
+    // Удаление курса преподавателем.
+    async function deleteCourse() {
+        if (!canEditCourse()) {
+            App.notify('Вы не можете удалить этот курс', 'error');
+            return;
+        }
+
+        if (!window.confirm('Вы действительно хотите удалить курс «' +
+            state.course.title + '»? Все задания и материалы курса также могут быть удалены.')) {
+            return;
+        }
+
+        try {
+            await App.api.courses.remove(state.course.id);
+
+            App.notify('Курс успешно удалён', 'success');
+
+            window.location.href = App.url('courses.html');
+        } catch (error) {
+            App.notify(error.message, 'error');
+        }
+    }
+
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
     init();
 })();

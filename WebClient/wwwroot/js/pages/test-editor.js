@@ -68,7 +68,11 @@
           return '<option value="' + assignment.id + '">' +
             App.escapeHtml(assignment.title) + '</option>';
         }).join('')
+<<<<<<< HEAD
       : '<option value="">— в курсе нет заданий —</option>';
+=======
+      : '<option value="">— в курсе нет тестов —</option>';
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
   }
 
   function renderSettings() {
@@ -467,7 +471,11 @@
 
     if (!state.selected) {
       document.getElementById('question-list').innerHTML =
+<<<<<<< HEAD
         '<div class="empty-state"><p class="muted">В этом курсе пока нет заданий. Нажмите «Новый тест».</p></div>';
+=======
+        '<div class="empty-state"><p class="muted">В этом курсе пока нет тестов. Нажмите «Новый тест».</p></div>';
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
       var counter = document.getElementById('questions-count');
       if (counter) {
         counter.textContent = 'Всего вопросов: 0';

@@ -1523,6 +1523,7 @@ main {
 .test-case-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+<<<<<<< HEAD
   gap: 12px;
   align-items: end;
 }
@@ -1533,12 +1534,17 @@ main {
 
 .test-case-row .form-field textarea {
   min-height: 64px;
+=======
+  gap: 8px;
+  align-items: center;
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
 }
 
 .test-case-row input {
   min-width: 0;
 }
 
+<<<<<<< HEAD
 .test-case-row .btn {
   white-space: nowrap;
 }
@@ -1547,6 +1553,8 @@ main {
   display: flex;
 }
 
+=======
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
 @media (max-width: 640px) {
   .code-example,
   .test-case-row {

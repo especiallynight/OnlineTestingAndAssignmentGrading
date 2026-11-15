@@ -109,14 +109,20 @@ using (var scope = app.Services.CreateScope())
         ]
         """;
 
+<<<<<<< HEAD
     // Демонстрационные данные: два курса, два теста и одно задание на код.
     // Набор создаётся только в пустой базе, поэтому повторный запуск
     // сервиса не добавляет дубликаты.
+=======
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
     if (!await db.Courses.AnyAsync())
     {
         var demoTeacherId = builder.Configuration.GetValue("Demo:TeacherId", 2);
         var demoStudentId = builder.Configuration.GetValue("Demo:StudentId", 3);
+<<<<<<< HEAD
         var now = DateTimeOffset.UtcNow;
+=======
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
 
         var csharpCourse = new Course
         {
@@ -185,10 +191,17 @@ using (var scope = app.Services.CreateScope())
             new Question
             {
                 Assignment = csharpTest,
+<<<<<<< HEAD
                 QuestionText = "Что выведет Console.WriteLine(2 + 3 * 4)?",
                 QuestionType = "SingleChoice",
                 QuestionOptions = Json("""{"a":"20","b":"14","c":"24"}"""),
                 CorrectAnswer = Json("\"b\"")
+=======
+                QuestionText = sumQuestionText,
+                QuestionType = "Code",
+                QuestionOptions = Json("{}"),
+                TestCases = Json(sumTestCasesJson)
+>>>>>>> 9cf917e (feat: add teacher panel to main HTML)
             },
             new Question
             {
@@ -238,6 +251,27 @@ using (var scope = app.Services.CreateScope())
             });
 
         await db.SaveChangesAsync();
+    }
+
+    // Обновляем демонстрационную задачу Sum и в уже существующей базе:
+    // добавляем примеры и несколько тестов, чтобы решение нельзя было
+    // захардкодить под один набор входных данных.
+    var sumQuestion = await db.Questions
+        .Include(question => question.Assignment)
+        .FirstOrDefaultAsync(question =>
+            question.QuestionType == "Code" &&
+            question.Assignment.Name == "Вводный тест по C#");
+
+    if (sumQuestion != null)
+    {
+        var currentTests = sumQuestion.TestCases?.GetRawText() ?? string.Empty;
+
+        if (!currentTests.Contains("-5 8"))
+        {
+            sumQuestion.QuestionText = sumQuestionText;
+            sumQuestion.TestCases = Json(sumTestCasesJson);
+            await db.SaveChangesAsync();
+        }
     }
 
     // Демонстрационная теория. Добавляется отдельно от курсов, чтобы

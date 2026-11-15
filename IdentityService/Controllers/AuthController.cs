@@ -265,6 +265,29 @@ namespace IdentityService.Controllers
 
             return Ok(applications);
         }
+        [HttpGet("teacher-application")]
+        [Authorize(Roles = "Student")]
+        public async Task<ActionResult> GetMyTeacherApplication()
+        {
+            var user_id = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!int.TryParse(user_id, out var id))
+                return Unauthorized();
+
+            var application = await _context.TeacherApplications
+                .Where(a => a.UserId == id)
+                .OrderByDescending(a => a.CreatedAt)
+                .Select(a => new
+                {
+                    a.TeacherApplicationId,
+                    a.Status,
+                    a.CreatedAt,
+                    a.ReviewedAt
+                })
+                .FirstOrDefaultAsync();
+
+            return Ok(application);
+        }
 
         [HttpPut("teacher-applications/{id}/approve")]
         [Authorize(Roles = "Admin")]
