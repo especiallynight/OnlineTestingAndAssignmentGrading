@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Прохождение теста — OnlineTesting</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <header id="app-header" class="app-header"></header>
+
+  <main>
+    <div class="container">
+      <div class="page-head">
+        <div>
+          <h1 id="test-page-title">Прохождение теста</h1>
+          <p class="page-subtitle" id="test-subtitle">Ответьте на вопросы и отправьте работу.</p>
+          <span class="service-note">Сервис: ExamService</span>
+        </div>
+      </div>
+
+      <div class="test-toolbar">
+        <div>
+          <strong id="test-title">Тест</strong>
+          <p class="muted small" id="test-meta"></p>
+        </div>
+        <div class="timer" aria-label="Оставшееся время">
+          <span class="timer-label">Осталось</span>
+          <span id="test-timer">—</span>
+        </div>
+      </div>
+
+      <p class="notice">
+        Ответы сохраняются автоматически по мере ввода. Задачи на код можно
+        проверить отдельно кнопкой «Проверить код»; итоговая оценка рассчитывается
+        после завершения попытки.
+      </p>
+
+      <form id="test-form">
+        <div class="question-list" id="question-list"></div>
+
+        <div class="test-submit-bar">
+          <span class="muted small">Завершение попытки отправит сохранённые ответы на проверку.</span>
+          <button class="btn btn-primary" type="submit" id="test-submit">Завершить попытку</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <footer id="app-footer" class="app-footer"></footer>
+
+  <script src="../js/layout.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/pages/test-taking.js"></script>
+</body>
+</html>
