@@ -1,3 +1,4 @@
+
 using CourseService.Data;
 using CourseService.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -9,12 +10,14 @@ using System.Text;
 using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Host.UseSerilog((context, configuration) =>
     configuration.ReadFrom.Configuration(context.Configuration)
-    .WriteTo.Console());
+        .WriteTo.Console());
 
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secretKey = jwtSettings["SecretKey"];
+
 if (string.IsNullOrWhiteSpace(secretKey))
 {
     throw new InvalidOperationException("JWT SecretKey is not configured.");
@@ -33,23 +36,28 @@ builder.Services
             ValidAudience = jwtSettings["Audience"],
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(secretKey)),
             RoleClaimType = "role"
         };
     });
 
 builder.Services.AddAuthorization();
+
 builder.Services.AddDbContext<CourseDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddStackExchangeRedisCache(options =>
 {
-    options.Configuration = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
+    options.Configuration =
+        builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
     options.InstanceName = "CourseService:";
 });
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -59,6 +67,7 @@ builder.Services.AddSwaggerGen(options =>
         BearerFormat = "JWT",
         Description = "Введите access token"
     });
+
     options.AddSecurityRequirement(document =>
         new OpenApiSecurityRequirement
         {
@@ -71,6 +80,7 @@ builder.Services.AddCors();
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
+
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -81,7 +91,13 @@ app.UseSwaggerUI(c =>
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.UseCors(p => p.WithOrigins("http://localhost:5238", "http://localhost:5000", "http://localhost:8080").AllowAnyMethod().AllowAnyHeader());
+app.UseCors(p => p
+    .WithOrigins(
+        "http://localhost:5238",
+        "http://localhost:5000",
+        "http://localhost:8080")
+    .AllowAnyMethod()
+    .AllowAnyHeader());
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
@@ -89,6 +105,7 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<CourseDbContext>();
+
     await db.Database.MigrateAsync();
 
     static JsonElement Json(string raw) =>
@@ -109,20 +126,14 @@ using (var scope = app.Services.CreateScope())
         ]
         """;
 
-<<<<<<< HEAD
-    // Демонстрационные данные: два курса, два теста и одно задание на код.
-    // Набор создаётся только в пустой базе, поэтому повторный запуск
-    // сервиса не добавляет дубликаты.
-=======
->>>>>>> 9cf917e (feat: add teacher panel to main HTML)
+    // Демонстрационные данные: два курса, тесты и задания на код.
+    // Данные добавляются только в пустую базу.
+
     if (!await db.Courses.AnyAsync())
     {
         var demoTeacherId = builder.Configuration.GetValue("Demo:TeacherId", 2);
         var demoStudentId = builder.Configuration.GetValue("Demo:StudentId", 3);
-<<<<<<< HEAD
         var now = DateTimeOffset.UtcNow;
-=======
->>>>>>> 9cf917e (feat: add teacher panel to main HTML)
 
         var csharpCourse = new Course
         {
@@ -191,17 +202,18 @@ using (var scope = app.Services.CreateScope())
             new Question
             {
                 Assignment = csharpTest,
-<<<<<<< HEAD
                 QuestionText = "Что выведет Console.WriteLine(2 + 3 * 4)?",
                 QuestionType = "SingleChoice",
                 QuestionOptions = Json("""{"a":"20","b":"14","c":"24"}"""),
                 CorrectAnswer = Json("\"b\"")
-=======
+            },
+            new Question
+            {
+                Assignment = csharpTest,
                 QuestionText = sumQuestionText,
                 QuestionType = "Code",
                 QuestionOptions = Json("{}"),
                 TestCases = Json(sumTestCasesJson)
->>>>>>> 9cf917e (feat: add teacher panel to main HTML)
             },
             new Question
             {
@@ -253,9 +265,7 @@ using (var scope = app.Services.CreateScope())
         await db.SaveChangesAsync();
     }
 
-    // Обновляем демонстрационную задачу Sum и в уже существующей базе:
-    // добавляем примеры и несколько тестов, чтобы решение нельзя было
-    // захардкодить под один набор входных данных.
+    // Обновляем демонстрационную задачу Sum и в уже существующей базе.
     var sumQuestion = await db.Questions
         .Include(question => question.Assignment)
         .FirstOrDefaultAsync(question =>
@@ -274,14 +284,17 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    // Демонстрационная теория. Добавляется отдельно от курсов, чтобы
-    // материалы появились и в уже существующей базе.
+    // Демонстрационная теория. Добавляется отдельно от курсов,
+    // чтобы материалы появились и в уже существующей базе.
     if (!await db.CourseMaterials.AnyAsync())
     {
         var csharpCourse = await db.Courses
-            .FirstOrDefaultAsync(course => course.Name == "Основы программирования на C#");
+            .FirstOrDefaultAsync(course =>
+                course.Name == "Основы программирования на C#");
+
         var webCourse = await db.Courses
-            .FirstOrDefaultAsync(course => course.Name == "Веб-разработка: HTML, CSS и JavaScript");
+            .FirstOrDefaultAsync(course =>
+                course.Name == "Веб-разработка: HTML, CSS и JavaScript");
 
         var materials = new List<CourseMaterial>();
 
@@ -473,4 +486,5 @@ using (var scope = app.Services.CreateScope())
         }
     }
 }
+
 app.Run();

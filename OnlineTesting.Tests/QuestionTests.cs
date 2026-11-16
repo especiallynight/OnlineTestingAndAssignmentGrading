@@ -100,7 +100,6 @@ namespace OnlineTesting.Tests
             Assert.Equal("1 2", examples[0].GetProperty("input").GetString());
             Assert.Equal("3", examples[0].GetProperty("expectedOutput").GetString());
         }
-<<<<<<< HEAD
 
         // Полный набор тестов не должен попадать в ответ для студента:
         // скрытые тесты остаются только у преподавателя и автопроверки.
@@ -119,7 +118,5 @@ namespace OnlineTesting.Tests
             Assert.DoesNotContain("1000000 2000000", json);
             Assert.DoesNotContain("test_cases", json);
         }
-=======
->>>>>>> 9cf917e (feat: add teacher panel to main HTML)
     }
 }
