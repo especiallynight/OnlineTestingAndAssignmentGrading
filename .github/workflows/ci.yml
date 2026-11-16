@@ -30,4 +30,4 @@ jobs:
         run: dotnet build --no-restore -c Release
 
       - name: Test
-        run: dotnet test OnlineTesting.Tests/OnlineTesting.Tests.csproj --no-build -c Release
+        run: dotnet test OnlineTesting.Tests/OnlineTesting.Tests.csproj --no-build -c Release --blame-hang-timeout 20s
